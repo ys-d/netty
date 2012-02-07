@@ -22,6 +22,9 @@ import io.netty.util.ExternalResourceReleasable;
  * A {@link ChannelBufferPool} buffers {@link ChannelBuffer} to save the overhead of creation of these. Its up to its implementation how to handle the creation. Some may prefer to create 
  * {@link ChannelBuffer}'s on demand, other may create a fixed amount and reuse them.
  * 
+ * Its important that users of the {@link ChannelBufferPool} take care of call {@link #release(ChannelBuffer)} for every {@link ChannelBuffer} that was retrieved via {@link #acquire(int)}.
+ * Otherwise the system <strong>deadlock</strong> because it has no {@link ChannelBuffer}'s left which are usable
+ * 
  *
  */
 public interface ChannelBufferPool extends ExternalResourceReleasable {
@@ -36,7 +39,7 @@ public interface ChannelBufferPool extends ExternalResourceReleasable {
      * @return buffer the acquired {@link ChannelBuffer}
      * @throws IllegalArgumentException if given capacity < 0
      */
-    ChannelBuffer acquire(long capacity);
+    ChannelBuffer acquire(int capacity);
     
     /**
      * Release the {@link ChannelBuffer} and so make it possible to acquire it again
@@ -44,7 +47,4 @@ public interface ChannelBufferPool extends ExternalResourceReleasable {
      * @param buf the {@link ChannelBuffer} to release
      */
     void release(ChannelBuffer buf);
-    
-    
-
 }

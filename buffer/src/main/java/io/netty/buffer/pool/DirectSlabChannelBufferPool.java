@@ -29,13 +29,13 @@ import java.nio.ByteOrder;
  */
 public class DirectSlabChannelBufferPool extends AbstractSlabChannelBufferPool {
     
-    public DirectSlabChannelBufferPool(int blockSize, int numBlocks, ByteOrder order) {
-        super(blockSize, numBlocks, order);
+    public DirectSlabChannelBufferPool(int blockSize, int numBlocks, ByteOrder order, boolean blockWhenSaturate) {
+        super(blockSize, numBlocks, order, blockWhenSaturate);
     }
 
     @Override
-    protected ChannelBuffer create(ByteOrder order, long size) {
-        return ChannelBuffers.directBuffer(order, (int) size);
+    protected ChannelBuffer create(ByteOrder order, int size) {
+        return ChannelBuffers.directBuffer(order, size);
     }
 
     @Override
