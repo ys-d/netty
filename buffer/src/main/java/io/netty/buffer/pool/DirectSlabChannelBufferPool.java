@@ -29,8 +29,18 @@ import java.nio.ByteOrder;
  */
 public class DirectSlabChannelBufferPool extends AbstractSlabChannelBufferPool {
     
+    /**
+     * See {@link AbstractSlabChannelBufferPool#AbstractSlabChannelBufferPool(int, int, ByteOrder, boolean)}
+     */
     public DirectSlabChannelBufferPool(int blockSize, int numBlocks, ByteOrder order, boolean blockWhenSaturate) {
         super(blockSize, numBlocks, order, blockWhenSaturate);
+    }
+
+    /**
+     * See {@link AbstractSlabChannelBufferPool#AbstractSlabChannelBufferPool(int, int)}
+     */
+    public DirectSlabChannelBufferPool(int blockSize, int numBlocks) {
+        super(blockSize, numBlocks);
     }
 
     @Override
@@ -41,6 +51,7 @@ public class DirectSlabChannelBufferPool extends AbstractSlabChannelBufferPool {
     @Override
     public void releaseExternalResources() {
         for (ChannelBuffer buf: slabs) {
+            // check if the channelbuffer is direct and if so destroy it
             if (buf.isDirect()) {
                 try {
                     destroyDirectByteBuffer(buf.toByteBuffer());

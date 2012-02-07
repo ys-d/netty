@@ -27,8 +27,18 @@ import io.netty.buffer.ChannelBuffers;
  */
 public class HeapSlabChannelBufferPool extends AbstractSlabChannelBufferPool {
 
+    /**
+     * See {@link AbstractSlabChannelBufferPool#AbstractSlabChannelBufferPool(int, int, ByteOrder, boolean)}
+     */
     public HeapSlabChannelBufferPool(int blockSize, int numBlocks, ByteOrder order, boolean blockWhenSaturate) {
         super(blockSize, numBlocks, order, blockWhenSaturate);
+    }
+
+    /**
+     * See {@link AbstractSlabChannelBufferPool#AbstractSlabChannelBufferPool(int, int)}
+     */
+    public HeapSlabChannelBufferPool(int blockSize, int numBlocks) {
+        super(blockSize, numBlocks);
     }
 
     @Override
