@@ -44,6 +44,8 @@ public interface ChannelBufferPool extends ExternalResourceReleasable {
     /**
      * Release the {@link ChannelBuffer} and so make it possible to acquire it again
      * 
+     * TODO: Think about moving the release method to {@link ChannelBuffer}
+     * 
      * @param buf the {@link ChannelBuffer} to release
      */
     void release(ChannelBuffer buf);

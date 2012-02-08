@@ -15,26 +15,66 @@
  */
 package io.netty.buffer.buffer;
 
+import java.nio.ByteOrder;
+
 import org.junit.Test;
 
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.pool.AbstractSlabChannelBufferPool;
 import io.netty.buffer.pool.ChannelBufferPool;
 import io.netty.buffer.pool.CouldNotAcquireException;
 import io.netty.buffer.pool.HeapSlabChannelBufferPool;
+
+import static org.junit.Assert.*;
+
 
 public class HeapSlabChannelBufferPoolTest extends AbstractChannelBufferPoolTest{
 
     @Override
     protected final ChannelBufferPool createPool(int minCapacity) {
-        return createSlabPool(minCapacity, 1);
+        return createSlabPool(minCapacity, 1, ByteOrder.nativeOrder(), true);
     }
     
-    protected ChannelBufferPool createSlabPool(int blockSize, int numBlocks) {
-        return new HeapSlabChannelBufferPool(blockSize, numBlocks);
+    protected AbstractSlabChannelBufferPool createSlabPool(int blockSize, int numBlocks,ByteOrder order, boolean blockWhenSaturate) {
+        return new HeapSlabChannelBufferPool(blockSize, numBlocks, order, blockWhenSaturate);
     }
     
     @Test
     public void testAcquireWithDifferentSlab() throws CouldNotAcquireException {
-        ChannelBufferPool pool = createSlabPool(3,5);
+        ChannelBufferPool pool = createSlabPool(3,5, ByteOrder.nativeOrder(), true);
         checkPool(pool, 10);
+    }
+    
+    @Test
+    public void testStats() throws CouldNotAcquireException {
+        AbstractSlabChannelBufferPool pool = createSlabPool(3,5, ByteOrder.nativeOrder(), true);
+        assertEquals(3*5, pool.getAllocatedMemory());
+        assertEquals(5, pool.getRemaining());
+        assertEquals(5, pool.getBlockCapacity());
+        assertEquals(3, pool.getBlockSize());
+        
+        ChannelBuffer buf = pool.acquire(2);
+        assertEquals(4, pool.getRemaining());
+        pool.release(buf);
+        assertEquals(5, pool.getRemaining());
+
+        buf = pool.acquire(4);
+        assertEquals(3, pool.getRemaining());
+        pool.release(buf);
+        
+        // TODO: Fix the code that let the test fail
+        assertEquals(5, pool.getRemaining());
+
+        pool.releaseExternalResources();
+    }
+    
+    @Test
+    public void testNotBlock() throws CouldNotAcquireException {
+        AbstractSlabChannelBufferPool pool = createSlabPool(1,1, ByteOrder.nativeOrder(), false);
+        pool.acquire(1);
+        pool.acquire(1);
+        
+        pool.releaseExternalResources();
+
     }
 }

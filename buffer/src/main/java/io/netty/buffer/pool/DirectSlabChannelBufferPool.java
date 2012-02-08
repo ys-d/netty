@@ -18,9 +18,6 @@ package io.netty.buffer.pool;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
@@ -48,13 +45,16 @@ public class DirectSlabChannelBufferPool extends AbstractSlabChannelBufferPool {
         return ChannelBuffers.directBuffer(order, size);
     }
 
+    /**
+     * Make sure all direct {@link ChannelBuffer}'s get released 
+     */
     @Override
     public void releaseExternalResources() {
         for (ChannelBuffer buf: slabs) {
             // check if the channelbuffer is direct and if so destroy it
             if (buf.isDirect()) {
                 try {
-                    destroyDirectByteBuffer(buf.toByteBuffer());
+                    DirectBufferUtil.destroy(buf);
                 } catch (Exception e) {
                     LOGGER.error("Unable to destroy direct ChannelBuffer!", e);
                 } 
@@ -63,33 +63,6 @@ public class DirectSlabChannelBufferPool extends AbstractSlabChannelBufferPool {
         super.releaseExternalResources();
     }
 
-    /**
-     * DirectByteBuffers are garbage collected by using a phantom reference and
-     * a reference queue. Every once a while, the JVM checks the reference queue
-     * and cleans the DirectByteBuffers. However, as this doesn't happen
-     * immediately after discarding all references to a DirectByteBuffer, it's
-     * easy to OutOfMemoryError yourself using DirectByteBuffers. This function
-     * explicitly calls the Cleaner method of a DirectByteBuffer.
-     * 
-     * @param toBeDestroyed
-     *            The DirectByteBuffer that will be "cleaned". Utilizes
-     *            reflection.
-     * 
-     */
-    private static void destroyDirectByteBuffer(ByteBuffer toBeDestroyed) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException, SecurityException, NoSuchMethodException {
 
-        // this should never hit here, anyway just to be safe!
-        if (!toBeDestroyed.isDirect()) {
-            throw new IllegalArgumentException("Given ByteBuffer is not direct");
-        }
-
-        Method cleanerMethod = toBeDestroyed.getClass().getMethod("cleaner");
-        cleanerMethod.setAccessible(true);
-        Object cleaner = cleanerMethod.invoke(toBeDestroyed);
-        Method cleanMethod = cleaner.getClass().getMethod("clean");
-        cleanMethod.setAccessible(true);
-        cleanMethod.invoke(cleaner);
-
-    }
 
 }

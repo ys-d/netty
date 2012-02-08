@@ -44,4 +44,15 @@ public abstract class AbstractChannelBufferPoolTest {
         
         pool.releaseExternalResources();
     }
+    
+    @Test
+    public void testAcquireFails() {
+        ChannelBufferPool pool = createPool(10);
+        try {
+            checkPool(pool, 20);
+            fail();
+        } catch (CouldNotAcquireException e) {
+            // expected
+        }
+    }
 }

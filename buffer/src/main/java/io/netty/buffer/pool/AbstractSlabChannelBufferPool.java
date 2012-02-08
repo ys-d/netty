@@ -72,34 +72,37 @@ public abstract class AbstractSlabChannelBufferPool implements ChannelBufferPool
      * @param blockWhenSaturate
      */
     AbstractSlabChannelBufferPool(int blockSize, int numBlocks, ByteOrder order, boolean blockWhenSaturate) {
-      buffers = new LinkedBlockingQueue<ChannelBuffer>();
-      slabs = new ConcurrentLinkedQueue<ChannelBuffer>();
-      if (blockSize <= 0) {
-          throw new IllegalArgumentException("blockSize must be positiv");
-      }
-      if (numBlocks <= 0) {
-          throw new IllegalArgumentException("numBlocks must be positiv");
-      }
-      this.blockSize = blockSize;
-      this.numBlocks = numBlocks;
-      this.order = order;
-      this.blockWhenSaturate = blockWhenSaturate;
+        if (blockSize <= 0) {
+            throw new IllegalArgumentException("blockSize must be positiv");
+        }
+        if (numBlocks <= 0) {
+            throw new IllegalArgumentException("numBlocks must be positiv");
+        }
 
-      int maxBlocksPerSlab = Integer.MAX_VALUE / blockSize;
-      int maxSlabSize = maxBlocksPerSlab * blockSize;
+        buffers = new LinkedBlockingQueue<ChannelBuffer>();
+        slabs = new ConcurrentLinkedQueue<ChannelBuffer>();
 
-      int numFullSlabs = numBlocks / maxBlocksPerSlab;
-      int partialSlabSize = (numBlocks % maxBlocksPerSlab) * blockSize;
-     
-      // allocate the full slabs
-      for (int i = 0; i < numFullSlabs; i++) {
-        allocateAndSlice(maxSlabSize, blockSize);
-      }
+        this.blockSize = blockSize;
+        this.numBlocks = numBlocks;
+        this.order = order;
+        this.blockWhenSaturate = blockWhenSaturate;
 
-      // allocate the last partial slab if needed
-      if (partialSlabSize > 0) {
-        allocateAndSlice(partialSlabSize, blockSize);
-      }
+        int maxBlocksPerSlab = Integer.MAX_VALUE / blockSize;
+        int maxSlabSize = maxBlocksPerSlab * blockSize;
+
+        int numFullSlabs = numBlocks / maxBlocksPerSlab;
+        int partialSlabSize = (numBlocks % maxBlocksPerSlab) * blockSize;
+
+        // allocate the full slabs
+        for (int i = 0; i < numFullSlabs; i++) {
+            allocateAndSlice(maxSlabSize, blockSize);
+        }
+
+        // allocate the last partial slab if needed
+        if (partialSlabSize > 0) {
+            allocateAndSlice(partialSlabSize, blockSize);
+        }
+
     }
     
     @Override
@@ -118,7 +121,7 @@ public abstract class AbstractSlabChannelBufferPool implements ChannelBufferPool
                 int blocks = (int) Math.ceil(amount);
                 
                 ChannelBuffer buf;
-                if (blocks <= 0) {
+                if (numBlocks < blocks) {
                     throw new CouldNotAcquireException("Requested capacity is bigger then the max offered by this ChannelPool");
                 } else if (blocks == 1) {
                     // we only need one buffer so just get one of the queue
@@ -136,6 +139,9 @@ public abstract class AbstractSlabChannelBufferPool implements ChannelBufferPool
                     }
 
                     // TODO: We should write a optimized ChannelBuffer impl for SLAB
+                    //       
+                    //       This also not work correctly for us when call release and the buffer was modified/sliced/duplicated in the meantime. 
+                    //
                     buf = ChannelBuffers.wrappedBuffer(bufs);
                     buf.writerIndex(0);
                 }
@@ -147,7 +153,6 @@ public abstract class AbstractSlabChannelBufferPool implements ChannelBufferPool
                 LOGGER.error("Interupted while acquire a ChannelBuffer", e);
                 Thread.currentThread().interrupt();
                 
-                // maybe we should better return an EMTPY buffer here ?
                 throw new CouldNotAcquireException("Error while try to acquire ChannelBuffer", e);
 
             }
@@ -207,21 +212,40 @@ public abstract class AbstractSlabChannelBufferPool implements ChannelBufferPool
         }
     }
 
+    /**
+     * Return the size (in bytes) of each block that is used by this {@link ChannelBufferPool} implementation to build up the Slab algorithm
+     * 
+     * @return blockSize
+     */
     public int getBlockSize() {
-        return this.blockSize;
+        return blockSize;
     }
 
+    /**
+     * Return the number of blocks that are offered via this {@link ChannelBufferPool} implementation
+     * 
+     * @return blockCapacity 
+     */
     public int getBlockCapacity() {
-        return this.numBlocks;
+        return numBlocks;
     }
 
+    /**
+     * Return the allocated memory of this {@link ChannelBufferPool} (in bytes)
+     * 
+     * @return allocatedMemory
+     */
+    public int getAllocatedMemory() {
+        return blockSize * numBlocks;
+    }
+    
     /**
      * Return the amount of remaining {@link ChannelBuffer}'s which can get acquired via the {@link #acquire(long)} method
      * 
      * @return remaining the remaining {@link ChannelBuffer}'s
      */
     public int getRemaining() {
-        return this.buffers.size();
+        return buffers.size();
     }
 
     /**
