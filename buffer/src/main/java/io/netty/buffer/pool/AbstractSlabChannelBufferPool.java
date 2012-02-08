@@ -103,7 +103,7 @@ public abstract class AbstractSlabChannelBufferPool implements ChannelBufferPool
     }
     
     @Override
-    public ChannelBuffer acquire(int capacity) {
+    public ChannelBuffer acquire(int capacity) throws CouldNotAcquireException {
         if (capacity < 0) {
             // a negative capacity makes no sense so throw an exception here
             throw new IllegalArgumentException("Capacity MUST be >= 0");
@@ -111,24 +111,35 @@ public abstract class AbstractSlabChannelBufferPool implements ChannelBufferPool
             return ChannelBuffers.EMPTY_BUFFER;
         } else {
             try {
+                // cast to double here as we need it later for the ceil
+                double amount = (double)capacity / blockSize;
                 
                 // calculate the number of channelbuffers that are needed to acquire a buffer of the requested capacity
-                int blocks = Math.round(blockSize / capacity);
+                int blocks = (int) Math.ceil(amount);
+                
                 ChannelBuffer buf;
-                if (blocks == 1) {
+                if (blocks <= 0) {
+                    throw new CouldNotAcquireException("Requested capacity is bigger then the max offered by this ChannelPool");
+                } else if (blocks == 1) {
                     // we only need one buffer so just get one of the queue
                     buf = nextBuffer(capacity);
                 } else {
                     // more then one buffer is needed so get as many as we need and return a wrapped buffer
                     ChannelBuffer bufs[] = new ChannelBuffer[blocks];
-                    for (int i = 0; i < blocks; i++) {
+                    
+                    for (int i = 0; i < bufs.length; i++) {
                         ChannelBuffer b = nextBuffer(capacity);
-                        b.clear();
-                        bufs[i] = b;
+                        
+                        // we need to set the writerIndex to something bigger as the reader index as otherwise wrapping will not work
+                        b.writerIndex(b.capacity());
+                        bufs[i] = (b);
                     }
-                    buf =  ChannelBuffers.wrappedBuffer(bufs);
+
+                    // TODO: We should write a optimized ChannelBuffer impl for SLAB
+                    buf = ChannelBuffers.wrappedBuffer(bufs);
+                    buf.writerIndex(0);
                 }
-                
+
                 
                 return buf;
                 
@@ -137,7 +148,8 @@ public abstract class AbstractSlabChannelBufferPool implements ChannelBufferPool
                 Thread.currentThread().interrupt();
                 
                 // maybe we should better return an EMTPY buffer here ?
-                return ChannelBuffers.buffer((int) capacity);
+                throw new CouldNotAcquireException("Error while try to acquire ChannelBuffer", e);
+
             }
         }
     }
@@ -148,7 +160,7 @@ public abstract class AbstractSlabChannelBufferPool implements ChannelBufferPool
         } else {
             ChannelBuffer buf = buffers.poll();
             if (buf == null) {
-                buf = nextBuffer(capacity);
+                buf = create(order, capacity);
             }
             return buf;
         }
@@ -156,6 +168,8 @@ public abstract class AbstractSlabChannelBufferPool implements ChannelBufferPool
     @Override
     public void release(ChannelBuffer buf) {
         if (buf instanceof PooledChannelBuffer) {
+            buf.clear();
+
             // the ChannelBuffer is of type PooledChannelBuffer so hopefully it was acquired by this pool. Every other check would be to "slow" here
             buffers.add(buf);
         } else if (buf instanceof CompositeChannelBuffer) {
@@ -185,20 +199,20 @@ public abstract class AbstractSlabChannelBufferPool implements ChannelBufferPool
      * @param sliceSize
      */
     private void allocateAndSlice(int capacity, int sliceSize) {
-      ChannelBuffer newSlab = create(order, capacity);
-      slabs.add(newSlab);
-      for (int j = 0; j < newSlab.capacity(); j += sliceSize) {
-        ChannelBuffer aSlice = newSlab.slice(j, j + sliceSize);
-        buffers.add(new PooledChannelBuffer(aSlice));
-      }
+        ChannelBuffer newSlab = create(order, capacity);
+        slabs.add(newSlab);
+        for (int j = 0; j < newSlab.capacity(); j += sliceSize) {
+            ChannelBuffer aSlice = newSlab.slice(j, sliceSize);
+            buffers.add(new PooledChannelBuffer(aSlice));
+        }
     }
-    
+
     public int getBlockSize() {
-      return this.blockSize;
+        return this.blockSize;
     }
 
     public int getBlockCapacity() {
-      return this.numBlocks;
+        return this.numBlocks;
     }
 
     /**
@@ -207,7 +221,7 @@ public abstract class AbstractSlabChannelBufferPool implements ChannelBufferPool
      * @return remaining the remaining {@link ChannelBuffer}'s
      */
     public int getRemaining() {
-      return this.buffers.size();
+        return this.buffers.size();
     }
 
     /**

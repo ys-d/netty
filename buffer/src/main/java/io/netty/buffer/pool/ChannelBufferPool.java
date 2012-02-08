@@ -39,7 +39,7 @@ public interface ChannelBufferPool extends ExternalResourceReleasable {
      * @return buffer the acquired {@link ChannelBuffer}
      * @throws IllegalArgumentException if given capacity < 0
      */
-    ChannelBuffer acquire(int capacity);
+    ChannelBuffer acquire(int capacity) throws CouldNotAcquireException;
     
     /**
      * Release the {@link ChannelBuffer} and so make it possible to acquire it again
