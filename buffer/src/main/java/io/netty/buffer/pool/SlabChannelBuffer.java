@@ -274,8 +274,6 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         checkIndexInBounds(index, 0);
         int listIndex = getListIndex(index);
         int offset = getOffset(index);
-        System.out.println(offset);
-
         buffers.get(listIndex).setByte(offset, value);
     }
 
