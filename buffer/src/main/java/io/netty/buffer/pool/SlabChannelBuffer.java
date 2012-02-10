@@ -157,33 +157,64 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     @Override
     public short getShort(int index) {
-        checkIndexInBounds(index, SHORT_SIZE);
-        int [] indexAndOffset = getIndexAndOffset(index);
+        ChannelBuffer[] bufs = getSlabs(index, SHORT_SIZE);
+        if (bufs.length == 1) {
+            return bufs[0].getShort(index);
+        } else {
+            byte[] array = new byte[SHORT_SIZE];
+            getBytes(index, array);
+            return (short) (array[0] & 0xFF | array[1] << 8);
 
-        return buffers[indexAndOffset[0]].getShort(indexAndOffset[1]);
+        }
+
     }
 
     @Override
     public int getUnsignedMedium(int index) {
-        checkIndexInBounds(index, MEDIUM_SIZE);
-        int [] indexAndOffset = getIndexAndOffset(index);
-
-        return buffers[indexAndOffset[0]].getUnsignedMedium(indexAndOffset[1]);
+        ChannelBuffer[] bufs = getSlabs(index, MEDIUM_SIZE);
+        if (bufs.length == 1) {
+            return bufs[0].getUnsignedMedium(index);
+        } else {
+            byte[] array = new byte[MEDIUM_SIZE];
+            getBytes(index, array);
+            return (array[0]     & 0xff) <<  0 |
+                    (array[1] & 0xff) <<  8 |
+                    (array[2] & 0xff) << 16;
+        }
     }
 
     @Override
     public int getInt(int index) {
-        checkIndexInBounds(index, INT_SIZE);
-        int [] indexAndOffset = getIndexAndOffset(index);
-
-        return buffers[indexAndOffset[0]].getInt(indexAndOffset[1]);
+        ChannelBuffer[] bufs = getSlabs(index, INT_SIZE);
+        if (bufs.length == 1) {
+            return bufs[0].getInt(index);
+        } else {
+            byte[] array = new byte[INT_SIZE];
+            getBytes(index, array);
+            return (array[0]     & 0xff) <<  0 |
+                    (array[1] & 0xff) <<  8 |
+                    (array[2] & 0xff) << 16 |
+                    (array[3] & 0xff) << 24;
+        }
     }
 
     @Override
     public long getLong(int index) {
-        checkIndexInBounds(index, LONG_SIZE);
-        int [] indexAndOffset = getIndexAndOffset(index);
-        return buffers[indexAndOffset[0]].getLong(indexAndOffset[1]);
+        ChannelBuffer[] bufs = getSlabs(index, LONG_SIZE);
+        if (bufs.length == 1) {
+            return bufs[0].getLong(index);
+        } else {
+            byte[] array = new byte[LONG_SIZE];
+            getBytes(index, array);
+            return ((long) array[0]     & 0xff) <<  0 |
+                    ((long) array[1] & 0xff) <<  8 |
+                    ((long) array[2] & 0xff) << 16 |
+                    ((long) array[3] & 0xff) << 24 |
+                    ((long) array[4] & 0xff) << 32 |
+                    ((long) array[5] & 0xff) << 40 |
+                    ((long) array[6] & 0xff) << 48 |
+                    ((long) array[7] & 0xff) << 56;
+        }
     }
 
     @Override
@@ -192,16 +223,16 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
         ChannelBuffer[] subBufs = getSlabs(index, length);
         
-        int subLength = Math.min(capPerBuf - offset, length);
+        int subLength = length(offset, length);
         int written = 0;
         
         for (ChannelBuffer buf : subBufs) {
             buf.getBytes(offset, dst, dstIndex, subLength);
 
-            offset += subLength;
+            offset = 0;
             dstIndex += subLength;
             written += subLength;
-            subLength = Math.min(capPerBuf, length - written);
+            subLength = left(written, length);
         }
 
     }
@@ -212,43 +243,34 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
         ChannelBuffer[] subBufs = getSlabs(index, length);
         
-        int subLength = Math.min(capPerBuf - offset, length);
+        int subLength = length(offset, length);
         int written = 0;
         for (ChannelBuffer buf : subBufs) {
+
             buf.getBytes(offset, dst, dstIndex, subLength);
 
-            offset += subLength;
+            offset = 0;
             dstIndex += subLength;
             written += subLength;
-            subLength = Math.min(capPerBuf, length - written);
+            subLength = left(written, length);
         }
         
     }
 
     @Override
     public void getBytes(int index, ByteBuffer dst) {
+        
+        ChannelBuffer[] subBufs = getSlabs(index, dst.remaining());
         int offset = getIndexAndOffset(index)[1];
-        int length = Math.min(capacity() - index, dst.remaining());
-        
-        ChannelBuffer[] subBufs = getSlabs(index, length);
-        
-        int subLength = Math.min(capPerBuf - offset, length);
-        int written = 0;
-        
+      
         for (ChannelBuffer buf : subBufs) {
-            System.out.println("R=" + dst.remaining());
             buf.getBytes(offset, dst);
-            System.out.println("R2=" + dst.remaining());
-
-            // check if we have remaining space in the destination ByteBuffer. If not exist here
-            if (!dst.hasRemaining()) {
+            if (dst.remaining() == 0) {
                 return;
             }
+            offset = 0;
+        }     
 
-            offset += subLength;
-            written += subLength;
-            subLength = Math.min(capPerBuf, length - written);
-        }        
     }
 
     @Override
@@ -257,14 +279,14 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
         ChannelBuffer[] subBufs = getSlabs(index, length);
         
-        int subLength = Math.min(capPerBuf - offset, length);
+        int subLength = length(offset, length);
         int written = 0;
         for (ChannelBuffer buf : subBufs) {
             buf.getBytes(offset, out, subLength);
 
-            offset += subLength;
+            offset = 0;
             written += subLength;
-            subLength = Math.min(capPerBuf, length - written);
+            subLength = left(written, length);
         }
 
     }
@@ -278,17 +300,22 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void setByte(int index, int value) {
         checkIndexInBounds(index, BYTE_SIZE);
         int [] indexAndOffset = getIndexAndOffset(index);
+        System.out.println("[" + indexAndOffset[0]+"]["+ indexAndOffset[1]+"]=" + value);
         buffers[indexAndOffset[0]].setByte(indexAndOffset[1], value);
     }
 
     @Override
     public void setShort(int index, int value) {
-        int offset = getIndexAndOffset(index)[1];
+        System.out.println("Index=" + index );
 
         ChannelBuffer[] subBufs = getSlabs(index, SHORT_SIZE);
         if (subBufs.length == 1) {
-            subBufs[0].setShort(offset, value);
+            System.out.println("Index=" + index + "  "+subBufs[0].capacity());
+            subBufs[0].setShort(index, value);
         } else {
+            int [] indexAndOffset = getIndexAndOffset(index);
+
+            int offset = indexAndOffset[1];
             int pos = 0;
             for (ChannelBuffer buf: subBufs) {
                 int writable = buf.writableBytes();
@@ -298,6 +325,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
                         return;
                     }
                 }
+                offset = 0;
                 
             }
         }
@@ -305,15 +333,17 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     @Override
     public void setMedium(int index, int value) {
-        int offset = getIndexAndOffset(index)[1];
 
         ChannelBuffer[] subBufs = getSlabs(index, MEDIUM_SIZE);
-        System.out.println("I=" + index + " C=" + capacity + " S=" + subBufs.length);
 
         if (subBufs.length == 1) {
-            subBufs[0].setMedium(offset, value);
+            subBufs[0].setMedium(index, value);
         } else {
+            int [] indexAndOffset = getIndexAndOffset(index);
+
+            int offset = indexAndOffset[1];
             int pos = 0;
+            
             for (ChannelBuffer buf: subBufs) {
                 int writable = buf.writableBytes();
                 for (int i = 0; i < writable; i++) {
@@ -322,6 +352,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
                         return;
                     }
                 }
+                offset = 0;
                 
             }
         }
@@ -329,12 +360,14 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     @Override
     public void setInt(int index, int value) {
-        int offset = getIndexAndOffset(index)[1];
 
         ChannelBuffer[] subBufs = getSlabs(index, INT_SIZE);
         if (subBufs.length == 1) {
-            subBufs[0].setInt(offset, value);
+            subBufs[0].setInt(index, value);
         } else {
+            int [] indexAndOffset = getIndexAndOffset(index);
+            int offset = indexAndOffset[1];
+
             int pos = 0;
             for (ChannelBuffer buf: subBufs) {
                 int writable = buf.writableBytes();
@@ -344,6 +377,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
                         return;
                     }
                 }
+                offset = 0;
                 
             }
         }
@@ -351,12 +385,14 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     @Override
     public void setLong(int index, long value) {
-        int offset = getIndexAndOffset(index)[1];
-
         ChannelBuffer[] subBufs = getSlabs(index, LONG_SIZE);
         if (subBufs.length ==1) {
-            subBufs[0].setLong(offset, value);
+            subBufs[0].setLong(index, value);
         } else {
+            int [] indexAndOffset = getIndexAndOffset(index);
+
+            int offset = indexAndOffset[1];
+
             int pos = 0;
             for (ChannelBuffer buf: subBufs) {
                 int writable = buf.writableBytes();
@@ -366,6 +402,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
                         return;
                     }
                 }
+                offset = 0;
                 
             }
         }
@@ -451,6 +488,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
        
     }
     
+    
     private byte mediumToByte(int index, int value) {
         if (order() == ByteOrder.LITTLE_ENDIAN) {
             switch (index) {
@@ -510,14 +548,18 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
         ChannelBuffer[] subBufs = getSlabs(index, length);
         
-        int subLength = Math.min(capPerBuf - offset, length);
+        int subLength = length(offset, length);
         int written = 0;
         for (ChannelBuffer buf : subBufs) {
             buf.setBytes(offset, src, srcIndex, subLength);
-            offset += subLength;
+            offset = 0;
             written += subLength;
-            subLength = Math.min(capPerBuf, length - written);
+            subLength = left(written, length);
             srcIndex += written;
+            
+            if (srcIndex >= src.capacity() -1) {
+                break;
+            }
         }
         
     }
@@ -528,14 +570,17 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
         ChannelBuffer[] subBufs = getSlabs(index, length);
         
-        int subLength = Math.min(capPerBuf - offset, length);
+        int subLength = length(offset, length);
         int written = 0;
         for (ChannelBuffer buf : subBufs) {
             buf.setBytes(offset, src, srcIndex, subLength);
-            offset += subLength;
+            offset = 0;
             written += subLength;
-            subLength = Math.min(capPerBuf, length - written);
+            subLength = left(written, length);
             srcIndex += written;
+            if (srcIndex >= src.length -1) {
+                break;
+            }
         }
     }
 
@@ -551,8 +596,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
             if (!src.hasRemaining()) {
                 return;
             }
-            offset += (remain - src.remaining());
-            remain = src.remaining();
+            offset = 0;
         }
     }
 
@@ -561,7 +605,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         int offset = getIndexAndOffset(index)[1];
 
         ChannelBuffer[] subBufs = getSlabs(index, length);
-        int subLength = Math.min(capPerBuf - offset, length);
+        int subLength = length(offset, length);
         int written = 0;
         
         for (ChannelBuffer buf : subBufs) {
@@ -576,6 +620,8 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
             } else {
                 written += i;
             }
+            offset = 0;
+
         }
         
         
@@ -587,7 +633,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         int offset = getIndexAndOffset(index)[1];
 
         ChannelBuffer[] subBufs = getSlabs(index, length);
-        int subLength = Math.min(capPerBuf - offset, length);
+        int subLength = length(offset, length);
         int written = 0;
         
         for (ChannelBuffer buf : subBufs) {
@@ -602,6 +648,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
             } else {
                 written += i;
             }
+            offset = 0;
         }
         
         
@@ -705,22 +752,40 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
      * @return listIndex
      */
     private int[] getIndexAndOffset(int index) {
-        int listIndex = 0; 
         if (index < capPerBuf) {
             return new int[] {0, index};
         } else {
-            while (index >= capPerBuf) {
-                listIndex++;
-                index =- capPerBuf;
-            }
-            if (index < 0) {
-                index = 0;
-            }
+            int off = index % capPerBuf;
+            int listIndex = index / capPerBuf;
 
-            return new int[] {listIndex, index};
+            return new int[] {listIndex, off};
         }
 
     }
+    
+    /**
+     * Calculate the maximal length to use
+     * 
+     * @param offset
+     * @param length
+     * @return
+     */
+    private int length(int offset, int length) {
+        return Math.min(capPerBuf - offset, length);
+    }
+    
+    
+    /**
+     * Calculate the amount of what is left to write.
+     *  
+     * @param written
+     * @param length
+     * @return leftToWrite
+     */
+    private int left(int written, int length) {
+        return Math.min(capPerBuf, length - written);
+    }
+    
     
     /**
      * Check if the given arguments are valid for the {@link ChannelBuffer}. If not throw an {@link IndexOutOfBoundsException}
@@ -744,7 +809,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     }
     
     /**
-     * Return a {@link List} which contains all {@link ChannelBuffer}'s that are needed to be able to read the needed length from the given index.
+     * Return an array which contains all {@link ChannelBuffer}'s that are needed to be able to read the needed length from the given index.
      * 
      * This method also checks if the requested index and length are valid, and if not throws an {@link IndexOutOfBoundsException}
      * @param index
@@ -758,28 +823,33 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         int startIndex = getIndexAndOffset(index)[0];
         
         // we need to add +1 to the index as subList is exclusive
-        int endIndex =  getIndexAndOffset(index + length)[0]; 
+        int endIndex =  getIndexAndOffset(index + length +1)[0]; 
 
         
         if (endIndex > buffers.length) {
             endIndex = buffers.length -1;
         }
 
-        System.out.println("start=" + startIndex + " end=" + endIndex);
-
-        int arrayLength = endIndex - startIndex +1;
-        if (arrayLength >= buffers.length) {
-            // We need all buffers to full fill the requested slabs.
-            // So we can just return the stored array and not need to create a new one
-            return buffers;
+        
+        int arrayLength = endIndex - startIndex;
+        if (arrayLength == 0) {
+            return new ChannelBuffer[] {buffers[endIndex]};
         } else {
-            // Create a new array which holds all needed ChannelBuffers
-            ChannelBuffer[] slabs = new ChannelBuffer[arrayLength];
-            for(int i = 0; i < arrayLength; startIndex++) {
-                slabs[i++] = buffers[startIndex];
+            if (arrayLength >= buffers.length) {
+                // We need all buffers to full fill the requested slabs.
+                // So we can just return the stored array and not need to create a new one
+                return buffers;
+            } else {
+                // Create a new array which holds all needed ChannelBuffers
+                ChannelBuffer[] slabs = new ChannelBuffer[arrayLength];
+                for(int i = 0; i < slabs.length; startIndex++) {
+                    slabs[i++] = buffers[startIndex];
+                }
+                return slabs;
             }
-            return slabs;
         }
+        
+      
 
     }
     
