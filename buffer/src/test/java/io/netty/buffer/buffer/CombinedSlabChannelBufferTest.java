@@ -15,8 +15,6 @@
  */
 package io.netty.buffer.buffer;
 
-import java.util.ArrayList;
-import java.util.List;
 
 import io.netty.buffer.BigEndianHeapChannelBuffer;
 import io.netty.buffer.ChannelBuffer;
@@ -28,9 +26,9 @@ public class CombinedSlabChannelBufferTest extends SlabChannelBufferTest{
     @Override
     protected ChannelBuffer newBuffer(int capacity) {
         int bufferSize = 2;
-        List<ChannelBuffer> buffers = new ArrayList<ChannelBuffer>(capacity);
-        for (int i = 0; i < capacity / bufferSize; i++) {
-            buffers.add(new BigEndianHeapChannelBuffer(new byte[bufferSize]));
+        ChannelBuffer[] buffers = new ChannelBuffer[capacity / bufferSize];
+        for (int i = 0; i < buffers.length; i++) {
+            buffers[i] = new BigEndianHeapChannelBuffer(new byte[bufferSize]);
         }
         
         buffer = new SlabChannelBuffer(buffers);

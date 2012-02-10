@@ -57,7 +57,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     private final ByteOrder order;
     private final int capPerBuf;
-    private final List<ChannelBuffer> buffers;
+    private final ChannelBuffer[] buffers;
     private final int capacity;
     private static final int LONG_SIZE = 8;
     private static final int INT_SIZE = 4;
@@ -70,11 +70,11 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
      * 
      * @param buffers
      */
-    public SlabChannelBuffer(List<ChannelBuffer> buffers) {
+    public SlabChannelBuffer(ChannelBuffer... buffers) {
         if (buffers == null) {
             throw new NullPointerException("buffers");
         } 
-        if (buffers.isEmpty()) {
+        if (buffers.length == 0) {
             throw new IllegalArgumentException("At least one ChannelBuffer must be given");
         }
         
@@ -121,7 +121,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         this.order = lastOrder;
         
         // pre-calculate the capacity
-        this.capacity = capPerBuf * buffers.size();
+        this.capacity = capPerBuf * buffers.length;
     }
     
     @Override
@@ -152,7 +152,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public byte getByte(int index) {
         checkIndexInBounds(index, BYTE_SIZE);
         int [] indexAndOffset = getIndexAndOffset(index);
-        return buffers.get(indexAndOffset[0]).getByte(indexAndOffset[1]);
+        return buffers[indexAndOffset[0]].getByte(indexAndOffset[1]);
     }
 
     @Override
@@ -160,7 +160,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         checkIndexInBounds(index, SHORT_SIZE);
         int [] indexAndOffset = getIndexAndOffset(index);
 
-        return buffers.get(indexAndOffset[0]).getShort(indexAndOffset[1]);
+        return buffers[indexAndOffset[0]].getShort(indexAndOffset[1]);
     }
 
     @Override
@@ -168,7 +168,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         checkIndexInBounds(index, MEDIUM_SIZE);
         int [] indexAndOffset = getIndexAndOffset(index);
 
-        return buffers.get(indexAndOffset[0]).getUnsignedMedium(indexAndOffset[1]);
+        return buffers[indexAndOffset[0]].getUnsignedMedium(indexAndOffset[1]);
     }
 
     @Override
@@ -176,21 +176,21 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         checkIndexInBounds(index, INT_SIZE);
         int [] indexAndOffset = getIndexAndOffset(index);
 
-        return buffers.get(indexAndOffset[0]).getInt(indexAndOffset[1]);
+        return buffers[indexAndOffset[0]].getInt(indexAndOffset[1]);
     }
 
     @Override
     public long getLong(int index) {
         checkIndexInBounds(index, LONG_SIZE);
         int [] indexAndOffset = getIndexAndOffset(index);
-        return buffers.get(indexAndOffset[0]).getLong(indexAndOffset[1]);
+        return buffers[indexAndOffset[0]].getLong(indexAndOffset[1]);
     }
 
     @Override
     public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
         int offset = getIndexAndOffset(index)[1];
 
-        List<ChannelBuffer> subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = getSlabs(index, length);
         
         int subLength = Math.min(capPerBuf - offset, length);
         int written = 0;
@@ -210,7 +210,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
         int offset = getIndexAndOffset(index)[1];
 
-        List<ChannelBuffer> subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = getSlabs(index, length);
         
         int subLength = Math.min(capPerBuf - offset, length);
         int written = 0;
@@ -230,14 +230,16 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         int offset = getIndexAndOffset(index)[1];
         int length = Math.min(capacity() - index, dst.remaining());
         
-        List<ChannelBuffer> subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = getSlabs(index, length);
         
         int subLength = Math.min(capPerBuf - offset, length);
         int written = 0;
         
         for (ChannelBuffer buf : subBufs) {
+            System.out.println("R=" + dst.remaining());
             buf.getBytes(offset, dst);
-            
+            System.out.println("R2=" + dst.remaining());
+
             // check if we have remaining space in the destination ByteBuffer. If not exist here
             if (!dst.hasRemaining()) {
                 return;
@@ -253,7 +255,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void getBytes(int index, OutputStream out, int length) throws IOException {
         int offset = getIndexAndOffset(index)[1];
 
-        List<ChannelBuffer> subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = getSlabs(index, length);
         
         int subLength = Math.min(capPerBuf - offset, length);
         int written = 0;
@@ -276,16 +278,16 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void setByte(int index, int value) {
         checkIndexInBounds(index, BYTE_SIZE);
         int [] indexAndOffset = getIndexAndOffset(index);
-        buffers.get(indexAndOffset[0]).setByte(indexAndOffset[1], value);
+        buffers[indexAndOffset[0]].setByte(indexAndOffset[1], value);
     }
 
     @Override
     public void setShort(int index, int value) {
         int offset = getIndexAndOffset(index)[1];
 
-        List<ChannelBuffer> subBufs = getSlabs(index, SHORT_SIZE);
-        if (subBufs.size() == 1) {
-            subBufs.get(0).setShort(offset, value);
+        ChannelBuffer[] subBufs = getSlabs(index, SHORT_SIZE);
+        if (subBufs.length == 1) {
+            subBufs[0].setShort(offset, value);
         } else {
             int pos = 0;
             for (ChannelBuffer buf: subBufs) {
@@ -305,9 +307,11 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void setMedium(int index, int value) {
         int offset = getIndexAndOffset(index)[1];
 
-        List<ChannelBuffer> subBufs = getSlabs(index, MEDIUM_SIZE);
-        if (subBufs.size() == 1) {
-            subBufs.get(0).setMedium(offset, value);
+        ChannelBuffer[] subBufs = getSlabs(index, MEDIUM_SIZE);
+        System.out.println("I=" + index + " C=" + capacity + " S=" + subBufs.length);
+
+        if (subBufs.length == 1) {
+            subBufs[0].setMedium(offset, value);
         } else {
             int pos = 0;
             for (ChannelBuffer buf: subBufs) {
@@ -327,9 +331,9 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void setInt(int index, int value) {
         int offset = getIndexAndOffset(index)[1];
 
-        List<ChannelBuffer> subBufs = getSlabs(index, INT_SIZE);
-        if (subBufs.size() == 1) {
-            subBufs.get(0).setInt(offset, value);
+        ChannelBuffer[] subBufs = getSlabs(index, INT_SIZE);
+        if (subBufs.length == 1) {
+            subBufs[0].setInt(offset, value);
         } else {
             int pos = 0;
             for (ChannelBuffer buf: subBufs) {
@@ -349,9 +353,9 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void setLong(int index, long value) {
         int offset = getIndexAndOffset(index)[1];
 
-        List<ChannelBuffer> subBufs = getSlabs(index, LONG_SIZE);
-        if (subBufs.size() ==1) {
-            subBufs.get(0).setLong(offset, value);
+        ChannelBuffer[] subBufs = getSlabs(index, LONG_SIZE);
+        if (subBufs.length ==1) {
+            subBufs[0].setLong(offset, value);
         } else {
             int pos = 0;
             for (ChannelBuffer buf: subBufs) {
@@ -504,7 +508,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
         int offset = getIndexAndOffset(index)[1];
 
-        List<ChannelBuffer> subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = getSlabs(index, length);
         
         int subLength = Math.min(capPerBuf - offset, length);
         int written = 0;
@@ -522,7 +526,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void setBytes(int index, byte[] src, int srcIndex, int length) {
         int offset = getIndexAndOffset(index)[1];
 
-        List<ChannelBuffer> subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = getSlabs(index, length);
         
         int subLength = Math.min(capPerBuf - offset, length);
         int written = 0;
@@ -540,7 +544,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         int offset = getIndexAndOffset(index)[1];
         int remain = src.remaining();
 
-        List<ChannelBuffer> subBufs = getSlabs(index, remain);
+        ChannelBuffer[] subBufs = getSlabs(index, remain);
         
         for (ChannelBuffer buf : subBufs) {
             buf.setBytes(offset, src);
@@ -556,7 +560,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public int setBytes(int index, InputStream in, int length) throws IOException {
         int offset = getIndexAndOffset(index)[1];
 
-        List<ChannelBuffer> subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = getSlabs(index, length);
         int subLength = Math.min(capPerBuf - offset, length);
         int written = 0;
         
@@ -582,7 +586,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         int offset = getIndexAndOffset(index)[1];
 
-        List<ChannelBuffer> subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = getSlabs(index, length);
         int subLength = Math.min(capPerBuf - offset, length);
         int written = 0;
         
@@ -650,15 +654,15 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     @Override
     public ChannelBuffer duplicate() {
-        ChannelBuffer duplicate = new SlabChannelBuffer(Arrays.asList((ChannelBuffer)this));
+        ChannelBuffer duplicate = new SlabChannelBuffer(this);
         duplicate.setIndex(readerIndex(), writerIndex());
         return duplicate;
     }
 
     @Override
     public ByteBuffer toByteBuffer(int index, int length) {
-        if (buffers.size() == 1) {
-            return buffers.get(0).toByteBuffer(index, length);
+        if (buffers.length == 1) {
+            return buffers[0].toByteBuffer(index, length);
         }
 
         ByteBuffer[] buffers = toByteBuffers(index, length);
@@ -736,7 +740,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
      * @return slabs
      */
     public List<ChannelBuffer> getSlabs() {
-        return Collections.unmodifiableList(buffers);
+        return Collections.unmodifiableList(Arrays.asList(buffers));
     }
     
     /**
@@ -747,19 +751,37 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
      * @param length
      * @return slabs
      */
-    private List<ChannelBuffer> getSlabs(int index, int length) {
+    private ChannelBuffer[] getSlabs(int index, int length) {
         // check if the requested index and length are valid
         checkIndexInBounds(index, length);
 
         int startIndex = getIndexAndOffset(index)[0];
         
-        System.out.println("index + length " + index + " " + length);
         // we need to add +1 to the index as subList is exclusive
-        int endIndex =  getIndexAndOffset(index + length)[0] +1; 
-        if (endIndex > buffers.size()) {
-            endIndex = buffers.size();
+        int endIndex =  getIndexAndOffset(index + length)[0]; 
+
+        
+        if (endIndex > buffers.length) {
+            endIndex = buffers.length -1;
         }
-        List<ChannelBuffer> subBufs = buffers.subList(startIndex, endIndex);
-        return subBufs;
+
+        System.out.println("start=" + startIndex + " end=" + endIndex);
+
+        int arrayLength = endIndex - startIndex +1;
+        if (arrayLength >= buffers.length) {
+            // We need all buffers to full fill the requested slabs.
+            // So we can just return the stored array and not need to create a new one
+            return buffers;
+        } else {
+            // Create a new array which holds all needed ChannelBuffers
+            ChannelBuffer[] slabs = new ChannelBuffer[arrayLength];
+            for(int i = 0; i < arrayLength; startIndex++) {
+                slabs[i++] = buffers[startIndex];
+            }
+            return slabs;
+        }
+
     }
+    
+    
 }

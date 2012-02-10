@@ -16,8 +16,6 @@
 package io.netty.buffer.buffer;
 
 import java.nio.ByteOrder;
-import java.util.Arrays;
-import java.util.Collections;
 
 import org.junit.Test;
 
@@ -32,7 +30,7 @@ public class SlabChannelBufferTest extends AbstractChannelBufferTest{
     
     @Override
     protected ChannelBuffer newBuffer(int capacity) {
-        buffer = new SlabChannelBuffer(Arrays.asList(ChannelBuffers.buffer(capacity)));
+        buffer = new SlabChannelBuffer(ChannelBuffers.buffer(capacity));
         return buffer;
     }
 
@@ -47,23 +45,23 @@ public class SlabChannelBufferTest extends AbstractChannelBufferTest{
     }
     
     @Test(expected = IllegalArgumentException.class)
-    public void testEmptyList() {
-        new SlabChannelBuffer(Collections.<ChannelBuffer>emptyList());
+    public void testEmptyArray() {
+        new SlabChannelBuffer(new ChannelBuffer[0]);
     }
     
     
     @Test(expected = IllegalArgumentException.class)
     public void testDifferentByteOrder() {        
-        new SlabChannelBuffer(Arrays.asList(ChannelBuffers.buffer(ByteOrder.LITTLE_ENDIAN, 1), ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN,1)));
+        new SlabChannelBuffer(ChannelBuffers.buffer(ByteOrder.LITTLE_ENDIAN, 1), ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN,1));
     }
     
     @Test(expected = IllegalArgumentException.class)
     public void testDifferentCapacity() {        
-        new SlabChannelBuffer(Arrays.asList(ChannelBuffers.buffer(1), ChannelBuffers.buffer(2)));
+        new SlabChannelBuffer(ChannelBuffers.buffer(1), ChannelBuffers.buffer(2));
     }
     
     @Test(expected = IllegalArgumentException.class)
     public void testMixingDirectAndHeap() {
-        new SlabChannelBuffer(Arrays.asList(ChannelBuffers.buffer(1), ChannelBuffers.directBuffer(1)));
+        new SlabChannelBuffer(ChannelBuffers.buffer(1), ChannelBuffers.directBuffer(1));
     }
 }
