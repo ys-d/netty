@@ -27,9 +27,10 @@ public class CombinedSlabChannelBufferTest extends SlabChannelBufferTest{
     
     @Override
     protected ChannelBuffer newBuffer(int capacity) {
+        int bufferSize = 2;
         List<ChannelBuffer> buffers = new ArrayList<ChannelBuffer>(capacity);
-        for (int i = 0; i < capacity; i++) {
-            buffers.add(new BigEndianHeapChannelBuffer(new byte[2]));
+        for (int i = 0; i < capacity / bufferSize; i++) {
+            buffers.add(new BigEndianHeapChannelBuffer(new byte[bufferSize]));
         }
         
         buffer = new SlabChannelBuffer(buffers);
