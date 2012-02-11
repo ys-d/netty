@@ -23,7 +23,6 @@ import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import io.netty.buffer.AbstractChannelBuffer;
@@ -157,13 +156,20 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     @Override
     public short getShort(int index) {
-        ChannelBuffer[] bufs = getSlabs(index, SHORT_SIZE);
+        ChannelBuffer[] bufs = slabs(index, SHORT_SIZE);
         if (bufs.length == 1) {
-            return bufs[0].getShort(index);
+            int [] indexAndOffset = getIndexAndOffset(index);
+            return bufs[0].getShort(indexAndOffset[1]);
         } else {
             byte[] array = new byte[SHORT_SIZE];
             getBytes(index, array);
-            return (short) (array[0] & 0xFF | array[1] << 8);
+            if (order() == ByteOrder.LITTLE_ENDIAN) {
+                return (short) (array[0] & 0xFF | array[1] << 8);
+            } else if (order() == ByteOrder.BIG_ENDIAN) {
+                return (short) (array[0] << 8 | array[1] & 0xFF);
+            } else {
+                throw new RuntimeException("Invalid ByteOrder");
+            }
 
         }
 
@@ -171,49 +177,86 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     @Override
     public int getUnsignedMedium(int index) {
-        ChannelBuffer[] bufs = getSlabs(index, MEDIUM_SIZE);
+        ChannelBuffer[] bufs = slabs(index, MEDIUM_SIZE);
         if (bufs.length == 1) {
-            return bufs[0].getUnsignedMedium(index);
+            int [] indexAndOffset = getIndexAndOffset(index);
+            return bufs[0].getUnsignedMedium(indexAndOffset[1]);
         } else {
             byte[] array = new byte[MEDIUM_SIZE];
             getBytes(index, array);
-            return (array[0]     & 0xff) <<  0 |
-                    (array[1] & 0xff) <<  8 |
-                    (array[2] & 0xff) << 16;
+            if (order() == ByteOrder.LITTLE_ENDIAN) {
+                return  (array[0]     & 0xff) <<  0 |
+                        (array[1] & 0xff) <<  8 |
+                        (array[2] & 0xff) << 16;
+            } else if (order() == ByteOrder.BIG_ENDIAN) {
+                return  (array[0]     & 0xff) << 16 |
+                        (array[1] & 0xff) <<  8 |
+                        (array[2] & 0xff) <<  0;
+            } else {
+                throw new RuntimeException("Invalid ByteOrder");
+            }
+            
         }
     }
 
     @Override
     public int getInt(int index) {
-        ChannelBuffer[] bufs = getSlabs(index, INT_SIZE);
+        ChannelBuffer[] bufs = slabs(index, INT_SIZE);
         if (bufs.length == 1) {
-            return bufs[0].getInt(index);
+            int [] indexAndOffset = getIndexAndOffset(index);
+            return bufs[0].getInt(indexAndOffset[1]);
         } else {
             byte[] array = new byte[INT_SIZE];
             getBytes(index, array);
-            return (array[0]     & 0xff) <<  0 |
-                    (array[1] & 0xff) <<  8 |
-                    (array[2] & 0xff) << 16 |
-                    (array[3] & 0xff) << 24;
+
+            if (order() == ByteOrder.LITTLE_ENDIAN) {
+                return (array[0]     & 0xff) <<  0 |
+                        (array[1] & 0xff) <<  8 |
+                        (array[2] & 0xff) << 16 |
+                        (array[3] & 0xff) << 24;
+            } else if (order() == ByteOrder.BIG_ENDIAN) {
+                return  (array[0]     & 0xff) << 24 |
+                        (array[1] & 0xff) << 16 |
+                        (array[2] & 0xff) <<  8 |
+                        (array[3] & 0xff) <<  0;
+            } else {
+                throw new RuntimeException("Invalid ByteOrder");
+            }
         }
     }
 
     @Override
     public long getLong(int index) {
-        ChannelBuffer[] bufs = getSlabs(index, LONG_SIZE);
+        ChannelBuffer[] bufs = slabs(index, LONG_SIZE);
         if (bufs.length == 1) {
-            return bufs[0].getLong(index);
+            int [] indexAndOffset = getIndexAndOffset(index);
+
+            return bufs[0].getLong(indexAndOffset[1]);
         } else {
             byte[] array = new byte[LONG_SIZE];
             getBytes(index, array);
-            return ((long) array[0]     & 0xff) <<  0 |
-                    ((long) array[1] & 0xff) <<  8 |
-                    ((long) array[2] & 0xff) << 16 |
-                    ((long) array[3] & 0xff) << 24 |
-                    ((long) array[4] & 0xff) << 32 |
-                    ((long) array[5] & 0xff) << 40 |
-                    ((long) array[6] & 0xff) << 48 |
-                    ((long) array[7] & 0xff) << 56;
+            if (order() == ByteOrder.LITTLE_ENDIAN) {
+                return  ((long) array[0]     & 0xff) <<  0 |
+                        ((long) array[1] & 0xff) <<  8 |
+                        ((long) array[2] & 0xff) << 16 |
+                        ((long) array[3] & 0xff) << 24 |
+                        ((long) array[4] & 0xff) << 32 |
+                        ((long) array[5] & 0xff) << 40 |
+                        ((long) array[6] & 0xff) << 48 |
+                        ((long) array[7] & 0xff) << 56;
+            } else if (order() == ByteOrder.BIG_ENDIAN) {
+                return  ((long) array[0]     & 0xff) << 56 |
+                        ((long) array[1] & 0xff) << 48 |
+                        ((long) array[2] & 0xff) << 40 |
+                        ((long) array[3] & 0xff) << 32 |
+                        ((long) array[4] & 0xff) << 24 |
+                        ((long) array[5] & 0xff) << 16 |
+                        ((long) array[6] & 0xff) <<  8 |
+                        ((long) array[7] & 0xff) <<  0;
+            } else {
+                throw new RuntimeException("Invalid ByteOrder");
+            }
+            
         }
     }
 
@@ -221,7 +264,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
         int offset = getIndexAndOffset(index)[1];
 
-        ChannelBuffer[] subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = slabs(index, length);
         
         int subLength = length(offset, length);
         int written = 0;
@@ -241,7 +284,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
         int offset = getIndexAndOffset(index)[1];
 
-        ChannelBuffer[] subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = slabs(index, length);
         
         int subLength = length(offset, length);
         int written = 0;
@@ -260,7 +303,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     @Override
     public void getBytes(int index, ByteBuffer dst) {
         
-        ChannelBuffer[] subBufs = getSlabs(index, dst.remaining());
+        ChannelBuffer[] subBufs = slabs(index, dst.remaining());
         int offset = getIndexAndOffset(index)[1];
       
         for (ChannelBuffer buf : subBufs) {
@@ -277,7 +320,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void getBytes(int index, OutputStream out, int length) throws IOException {
         int offset = getIndexAndOffset(index)[1];
 
-        ChannelBuffer[] subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = slabs(index, length);
         
         int subLength = length(offset, length);
         int written = 0;
@@ -306,14 +349,12 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     @Override
     public void setShort(int index, int value) {
-        System.out.println("Index=" + index );
+        int [] indexAndOffset = getIndexAndOffset(index);
 
-        ChannelBuffer[] subBufs = getSlabs(index, SHORT_SIZE);
+        ChannelBuffer[] subBufs = slabs(index, SHORT_SIZE);
         if (subBufs.length == 1) {
-            System.out.println("Index=" + index + "  "+subBufs[0].capacity());
-            subBufs[0].setShort(index, value);
+            subBufs[0].setShort(indexAndOffset[1], value);
         } else {
-            int [] indexAndOffset = getIndexAndOffset(index);
 
             int offset = indexAndOffset[1];
             int pos = 0;
@@ -333,14 +374,13 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     @Override
     public void setMedium(int index, int value) {
-
-        ChannelBuffer[] subBufs = getSlabs(index, MEDIUM_SIZE);
+        int [] indexAndOffset = getIndexAndOffset(index);
+        
+        ChannelBuffer[] subBufs = slabs(index, MEDIUM_SIZE);
 
         if (subBufs.length == 1) {
-            subBufs[0].setMedium(index, value);
+            subBufs[0].setMedium(indexAndOffset[1], value);
         } else {
-            int [] indexAndOffset = getIndexAndOffset(index);
-
             int offset = indexAndOffset[1];
             int pos = 0;
             
@@ -360,12 +400,12 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     @Override
     public void setInt(int index, int value) {
+        int [] indexAndOffset = getIndexAndOffset(index);
 
-        ChannelBuffer[] subBufs = getSlabs(index, INT_SIZE);
+        ChannelBuffer[] subBufs = slabs(index, INT_SIZE);
         if (subBufs.length == 1) {
-            subBufs[0].setInt(index, value);
+            subBufs[0].setInt(indexAndOffset[1], value);
         } else {
-            int [] indexAndOffset = getIndexAndOffset(index);
             int offset = indexAndOffset[1];
 
             int pos = 0;
@@ -385,12 +425,11 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     @Override
     public void setLong(int index, long value) {
-        ChannelBuffer[] subBufs = getSlabs(index, LONG_SIZE);
+        int [] indexAndOffset = getIndexAndOffset(index);
+        ChannelBuffer[] subBufs = slabs(index, LONG_SIZE);
         if (subBufs.length ==1) {
-            subBufs[0].setLong(index, value);
+            subBufs[0].setLong(indexAndOffset[1], value);
         } else {
-            int [] indexAndOffset = getIndexAndOffset(index);
-
             int offset = indexAndOffset[1];
 
             int pos = 0;
@@ -546,7 +585,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
         int offset = getIndexAndOffset(index)[1];
 
-        ChannelBuffer[] subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = slabs(index, length);
         
         int subLength = length(offset, length);
         int written = 0;
@@ -568,7 +607,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void setBytes(int index, byte[] src, int srcIndex, int length) {
         int offset = getIndexAndOffset(index)[1];
 
-        ChannelBuffer[] subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = slabs(index, length);
         
         int subLength = length(offset, length);
         int written = 0;
@@ -589,7 +628,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         int offset = getIndexAndOffset(index)[1];
         int remain = src.remaining();
 
-        ChannelBuffer[] subBufs = getSlabs(index, remain);
+        ChannelBuffer[] subBufs = slabs(index, remain);
         
         for (ChannelBuffer buf : subBufs) {
             buf.setBytes(offset, src);
@@ -604,7 +643,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public int setBytes(int index, InputStream in, int length) throws IOException {
         int offset = getIndexAndOffset(index)[1];
 
-        ChannelBuffer[] subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = slabs(index, length);
         int subLength = length(offset, length);
         int written = 0;
         
@@ -632,7 +671,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         int offset = getIndexAndOffset(index)[1];
 
-        ChannelBuffer[] subBufs = getSlabs(index, length);
+        ChannelBuffer[] subBufs = slabs(index, length);
         int subLength = length(offset, length);
         int written = 0;
         
@@ -805,7 +844,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
      * @return slabs
      */
     public List<ChannelBuffer> getSlabs() {
-        return Collections.unmodifiableList(Arrays.asList(buffers));
+        return Arrays.asList(buffers);
     }
     
     /**
@@ -816,7 +855,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
      * @param length
      * @return slabs
      */
-    private ChannelBuffer[] getSlabs(int index, int length) {
+    private ChannelBuffer[] slabs(int index, int length) {
         // check if the requested index and length are valid
         checkIndexInBounds(index, length);
 
@@ -853,5 +892,8 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     }
     
+    public List<ChannelBuffer> getSlabs(int index, int length) {
+        return Arrays.asList(slabs(index, length));
+    }
     
 }

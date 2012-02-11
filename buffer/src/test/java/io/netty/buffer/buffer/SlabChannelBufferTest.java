@@ -15,7 +15,10 @@
  */
 package io.netty.buffer.buffer;
 
+import static org.junit.Assert.assertEquals;
+
 import java.nio.ByteOrder;
+import java.util.List;
 
 import org.junit.Test;
 
@@ -26,7 +29,7 @@ import io.netty.buffer.pool.SlabChannelBuffer;
 
 public class SlabChannelBufferTest extends AbstractChannelBufferTest{
 
-    private ChannelBuffer buffer;
+    private SlabChannelBuffer buffer;
     
     @Override
     protected ChannelBuffer newBuffer(int capacity) {
@@ -63,5 +66,12 @@ public class SlabChannelBufferTest extends AbstractChannelBufferTest{
     @Test(expected = IllegalArgumentException.class)
     public void testMixingDirectAndHeap() {
         new SlabChannelBuffer(ChannelBuffers.buffer(1), ChannelBuffers.directBuffer(1));
+    }
+    
+    @Test
+    public void testGetSlabs() {
+        List<ChannelBuffer> buffers = buffer.getSlabs(0, buffer.capacity());
+        assertEquals(buffers.size(), 1);
+        assertEquals(buffers.get(0).capacity(), buffer.capacity());
     }
 }

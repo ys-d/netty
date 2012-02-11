@@ -16,12 +16,18 @@
 package io.netty.buffer.buffer;
 
 
+import static org.junit.Assert.assertEquals;
+
+import java.util.List;
+
+import org.junit.Test;
+
 import io.netty.buffer.BigEndianHeapChannelBuffer;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.pool.SlabChannelBuffer;
 
 public class CombinedSlabChannelBufferTest extends SlabChannelBufferTest{
-    private ChannelBuffer buffer;
+    private SlabChannelBuffer buffer;
     
     @Override
     protected ChannelBuffer newBuffer(int capacity) {
@@ -38,5 +44,27 @@ public class CombinedSlabChannelBufferTest extends SlabChannelBufferTest{
     @Override
     protected ChannelBuffer[] components() {
         return new ChannelBuffer[] {buffer};
+    }
+    
+    @Test
+    public void testGetSlabs() {
+        List<ChannelBuffer> buffers = buffer.getSlabs(0, buffer.capacity());
+        assertEquals(buffer.capacity() / 2, buffers.size());
+        for (ChannelBuffer buf: buffers) {
+            assertEquals(2, buf.capacity());
+        }
+        
+        buffers = buffer.getSlabs(0, buffer.capacity() -1);
+        assertEquals(buffer.capacity() / 2, buffers.size());
+        for (ChannelBuffer buf: buffers) {
+            assertEquals(2, buf.capacity());
+        }
+        buffers = buffer.getSlabs(0, 1);
+        assertEquals(1, buffers.size());
+        assertEquals(2, buffers.get(0).capacity());
+        
+        buffers = buffer.getSlabs(1, 4);
+        assertEquals(3, buffers.size());
+        assertEquals(2, buffers.get(0).capacity());
     }
 }
