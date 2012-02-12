@@ -18,9 +18,22 @@ package io.netty.buffer;
 import java.nio.ByteOrder;
 
 
+/**
+ * Utility class for {@link ChannelBuffer}
+ * 
+ *
+ */
 public class ChannelBufferUtil {
 
 
+    /**
+     * Convert the given value from long to byte depending on the given index
+     * 
+     * @param index
+     * @param value
+     * @param order
+     * @return byte
+     */
     public static byte longToByte(int index, long value, ByteOrder order) {
         if (order == ByteOrder.LITTLE_ENDIAN) {
             switch (index) {
@@ -69,6 +82,14 @@ public class ChannelBufferUtil {
 
     }
     
+    /**
+     * Convert the given value from int to byte depending on the given index
+     * 
+     * @param index
+     * @param value
+     * @param order
+     * @return byte
+     */
     public static byte intToByte(int index, int value, ByteOrder order) {
         if (order == ByteOrder.LITTLE_ENDIAN) {
             switch (index) {
@@ -101,7 +122,14 @@ public class ChannelBufferUtil {
        
     }
     
-    
+    /**
+     * Convert the given value from medium to byte depending on the given index
+     * 
+     * @param index
+     * @param value
+     * @param order
+     * @return byte
+     */
     public static byte mediumToByte(int index, int value, ByteOrder order) {
         if (order == ByteOrder.LITTLE_ENDIAN) {
             switch (index) {
@@ -130,6 +158,14 @@ public class ChannelBufferUtil {
         
     }
     
+    /**
+     * Convert the given value from short to byte depending on the given index
+     * 
+     * @param index
+     * @param value
+     * @param order
+     * @return byte
+     */
     public static byte shortToByte(int index, int value, ByteOrder order) {
         if (order == ByteOrder.LITTLE_ENDIAN) {
             switch (index) {
@@ -155,11 +191,24 @@ public class ChannelBufferUtil {
 
        
     }
+    
+    
     public static long getLong(byte[] array, ByteOrder order) {
         return getLong(0, array, order);
     }
 
         
+    /**
+     * Get a long out of the given array.
+     * 
+     * @param index
+     *            the index to start in the array
+     * @param array
+     *            the array to build it from
+     * @param order
+     *            the {@link ByteOrder}
+     * @return value
+     */
     public static long getLong(int index, byte[] array, ByteOrder order) {
         if (order == ByteOrder.LITTLE_ENDIAN) {
             return  ((long) array[index]     & 0xff) <<  0 |
@@ -187,6 +236,18 @@ public class ChannelBufferUtil {
         return getInt(0, array, order);
     }
     
+    
+    /**
+     * Get a int out of the given array.
+     * 
+     * @param index
+     *            the index to start in the array
+     * @param array
+     *            the array to build it from
+     * @param order
+     *            the {@link ByteOrder}
+     * @return value
+     */
     public static int getInt(int index, byte[] array, ByteOrder order) {
         if (order == ByteOrder.LITTLE_ENDIAN) {
             return  (array[index]     & 0xff) <<  0 |
@@ -207,6 +268,17 @@ public class ChannelBufferUtil {
         return getShort(0, array, order);
     }
     
+    /**
+     * Get a short out of the given array.
+     * 
+     * @param index
+     *            the index to start in the array
+     * @param array
+     *            the array to build it from
+     * @param order
+     *            the {@link ByteOrder}
+     * @return value
+     */
     public static short getShort(int index, byte[] array, ByteOrder order) {
         if (order == ByteOrder.LITTLE_ENDIAN) {
             return (short) (array[index] & 0xFF | array[index +1] << 8);
@@ -221,6 +293,18 @@ public class ChannelBufferUtil {
         return getUnsignedMedium(0, array, order);
     }
     
+    
+    /**
+     * Get a unsigned medium out of the given array.
+     * 
+     * @param index
+     *            the index to start in the array
+     * @param array
+     *            the array to build it from
+     * @param order
+     *            the {@link ByteOrder}
+     * @return value
+     */
     public static int getUnsignedMedium(int index, byte[] array, ByteOrder order) {
         if (order == ByteOrder.LITTLE_ENDIAN) {
             return  (array[index]     & 0xff) <<  0 |
