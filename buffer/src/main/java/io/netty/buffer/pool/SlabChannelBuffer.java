@@ -29,6 +29,7 @@ import io.netty.buffer.AbstractChannelBuffer;
 import io.netty.buffer.BigEndianHeapChannelBuffer;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.ChannelBufferUtil;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.buffer.HeapChannelBufferFactory;
 import io.netty.buffer.LittleEndianHeapChannelBuffer;
@@ -163,13 +164,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         } else {
             byte[] array = new byte[SHORT_SIZE];
             getBytes(index, array);
-            if (order() == ByteOrder.LITTLE_ENDIAN) {
-                return (short) (array[0] & 0xFF | array[1] << 8);
-            } else if (order() == ByteOrder.BIG_ENDIAN) {
-                return (short) (array[0] << 8 | array[1] & 0xFF);
-            } else {
-                throw new RuntimeException("Invalid ByteOrder");
-            }
+            return ChannelBufferUtil.getShort(array, order());
 
         }
 
@@ -184,17 +179,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         } else {
             byte[] array = new byte[MEDIUM_SIZE];
             getBytes(index, array);
-            if (order() == ByteOrder.LITTLE_ENDIAN) {
-                return  (array[0]     & 0xff) <<  0 |
-                        (array[1] & 0xff) <<  8 |
-                        (array[2] & 0xff) << 16;
-            } else if (order() == ByteOrder.BIG_ENDIAN) {
-                return  (array[0]     & 0xff) << 16 |
-                        (array[1] & 0xff) <<  8 |
-                        (array[2] & 0xff) <<  0;
-            } else {
-                throw new RuntimeException("Invalid ByteOrder");
-            }
+            return ChannelBufferUtil.getUnsignedMedium(array, order());
             
         }
     }
@@ -209,19 +194,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
             byte[] array = new byte[INT_SIZE];
             getBytes(index, array);
 
-            if (order() == ByteOrder.LITTLE_ENDIAN) {
-                return (array[0]     & 0xff) <<  0 |
-                        (array[1] & 0xff) <<  8 |
-                        (array[2] & 0xff) << 16 |
-                        (array[3] & 0xff) << 24;
-            } else if (order() == ByteOrder.BIG_ENDIAN) {
-                return  (array[0]     & 0xff) << 24 |
-                        (array[1] & 0xff) << 16 |
-                        (array[2] & 0xff) <<  8 |
-                        (array[3] & 0xff) <<  0;
-            } else {
-                throw new RuntimeException("Invalid ByteOrder");
-            }
+            return ChannelBufferUtil.getInt(array, order);
         }
     }
 
@@ -235,27 +208,8 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         } else {
             byte[] array = new byte[LONG_SIZE];
             getBytes(index, array);
-            if (order() == ByteOrder.LITTLE_ENDIAN) {
-                return  ((long) array[0]     & 0xff) <<  0 |
-                        ((long) array[1] & 0xff) <<  8 |
-                        ((long) array[2] & 0xff) << 16 |
-                        ((long) array[3] & 0xff) << 24 |
-                        ((long) array[4] & 0xff) << 32 |
-                        ((long) array[5] & 0xff) << 40 |
-                        ((long) array[6] & 0xff) << 48 |
-                        ((long) array[7] & 0xff) << 56;
-            } else if (order() == ByteOrder.BIG_ENDIAN) {
-                return  ((long) array[0]     & 0xff) << 56 |
-                        ((long) array[1] & 0xff) << 48 |
-                        ((long) array[2] & 0xff) << 40 |
-                        ((long) array[3] & 0xff) << 32 |
-                        ((long) array[4] & 0xff) << 24 |
-                        ((long) array[5] & 0xff) << 16 |
-                        ((long) array[6] & 0xff) <<  8 |
-                        ((long) array[7] & 0xff) <<  0;
-            } else {
-                throw new RuntimeException("Invalid ByteOrder");
-            }
+            
+            return ChannelBufferUtil.getLong(array, order);
             
         }
     }
@@ -282,6 +236,10 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     @Override
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
+        if (index < 0 || dstIndex < 0 || index + length > capacity() || dstIndex + length > dst.length) {
+            throw new IndexOutOfBoundsException();
+        }
+        
         int offset = getIndexAndOffset(index)[1];
 
         ChannelBuffer[] subBufs = slabs(index, length);
@@ -343,7 +301,6 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void setByte(int index, int value) {
         checkIndexInBounds(index, BYTE_SIZE);
         int [] indexAndOffset = getIndexAndOffset(index);
-        System.out.println("[" + indexAndOffset[0]+"]["+ indexAndOffset[1]+"]=" + value);
         buffers[indexAndOffset[0]].setByte(indexAndOffset[1], value);
     }
 
@@ -355,20 +312,12 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         if (subBufs.length == 1) {
             subBufs[0].setShort(indexAndOffset[1], value);
         } else {
-
-            int offset = indexAndOffset[1];
-            int pos = 0;
-            for (ChannelBuffer buf: subBufs) {
-                int writable = buf.writableBytes();
-                for (int i = 0; i < writable; i++) {
-                    buf.setByte(offset++, shortToByte(pos++, value));
-                    if (pos == SHORT_SIZE) {
-                        return;
-                    }
-                }
-                offset = 0;
-                
+            // Create a new byte array that hold all bytes and set it
+            byte[] bytes = new byte[SHORT_SIZE];
+            for (int i = 0; i < bytes.length; i++) {
+                bytes[i] = ChannelBufferUtil.shortToByte(i, value, order());
             }
+            setBytes(index, bytes);
         }
     }
 
@@ -381,20 +330,12 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         if (subBufs.length == 1) {
             subBufs[0].setMedium(indexAndOffset[1], value);
         } else {
-            int offset = indexAndOffset[1];
-            int pos = 0;
-            
-            for (ChannelBuffer buf: subBufs) {
-                int writable = buf.writableBytes();
-                for (int i = 0; i < writable; i++) {
-                    buf.setByte(offset++, mediumToByte(pos++, value));
-                    if (pos == MEDIUM_SIZE) {
-                        return;
-                    }
-                }
-                offset = 0;
-                
+            // Create a new byte array that hold all bytes and set it
+            byte[] bytes = new byte[MEDIUM_SIZE];
+            for (int i = 0; i < bytes.length; i++) {
+                bytes[i] = ChannelBufferUtil.mediumToByte(i, value, order());
             }
+            setBytes(index, bytes);
         }
     }
 
@@ -406,20 +347,12 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         if (subBufs.length == 1) {
             subBufs[0].setInt(indexAndOffset[1], value);
         } else {
-            int offset = indexAndOffset[1];
-
-            int pos = 0;
-            for (ChannelBuffer buf: subBufs) {
-                int writable = buf.writableBytes();
-                for (int i = 0; i < writable; i++) {
-                    buf.setByte(offset++, intToByte(pos++, value));
-                    if (pos == INT_SIZE) {
-                        return;
-                    }
-                }
-                offset = 0;
-                
+            // Create a new byte array that hold all bytes and set it
+            byte[] bytes = new byte[INT_SIZE];
+            for (int i = 0; i < bytes.length; i++) {
+                bytes[i] = ChannelBufferUtil.intToByte(i, value, order());
             }
+            setBytes(index, bytes);
         }
     }
 
@@ -430,157 +363,15 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         if (subBufs.length ==1) {
             subBufs[0].setLong(indexAndOffset[1], value);
         } else {
-            int offset = indexAndOffset[1];
-
-            int pos = 0;
-            for (ChannelBuffer buf: subBufs) {
-                int writable = buf.writableBytes();
-                for (int i = 0; i < writable; i++) {
-                    buf.setByte(offset++, longToByte(pos++, value));
-                    if (pos == LONG_SIZE) {
-                        return;
-                    }
-                }
-                offset = 0;
-                
+            // Create a new byte array that hold all bytes and set it
+            byte[] bytes = new byte[LONG_SIZE];
+            for (int i = 0; i < bytes.length; i++) {
+                bytes[i] = ChannelBufferUtil.longToByte(i, value, order());
             }
+            setBytes(index, bytes);
         }
     }
 
-    private byte longToByte(int index, long value) {
-        if (order() == ByteOrder.LITTLE_ENDIAN) {
-            switch (index) {
-            case 0:
-                return (byte) (value >>> 56);
-            case 1:
-                return (byte) (value >>> 48);
-            case 2:
-                return (byte) (value >>> 40);
-            case 3:
-                return (byte) (value >>> 32);
-            case 4:
-                return (byte) (value >>> 24);
-            case 5:
-                return (byte) (value >>> 16);
-            case 6:
-                return (byte) (value >>> 8);
-            case 7:
-                return (byte) (value >>> 0);
-            default:
-                throw new IllegalArgumentException();
-            }
-        } else if (order == ByteOrder.BIG_ENDIAN) {
-            switch (index) {
-            case 7:
-                return (byte) (value >>> 56);
-            case 6:
-                return (byte) (value >>> 48);
-            case 5:
-                return (byte) (value >>> 40);
-            case 4:
-                return (byte) (value >>> 32);
-            case 3:
-                return (byte) (value >>> 24);
-            case 2:
-                return (byte) (value >>> 16);
-            case 1:
-                return (byte) (value >>> 8);
-            case 0:
-                return (byte) (value >>> 0);
-            default:
-                throw new IllegalArgumentException();
-            }
-        }
-        throw new RuntimeException("Unsupported ByteOrder");
-
-    }
-    
-    private  byte intToByte(int index, int value) {
-        if (order() == ByteOrder.LITTLE_ENDIAN) {
-            switch (index) {
-            case 0:
-                return (byte) (value >>> 24);
-            case 1:
-                return (byte) (value >>> 16);
-            case 2:
-                return (byte) (value >>> 8);
-            case 3:
-                return (byte) (value >>> 0);
-            default:
-                throw new IllegalArgumentException();
-            }
-        } else if (order == ByteOrder.BIG_ENDIAN) {
-            switch (index) {
-            case 3:
-                return (byte) (value >>> 24);
-            case 2:
-                return (byte) (value >>> 16);
-            case 1:
-                return (byte) (value >>> 8);
-            case 0:
-                return (byte) (value >>> 0);
-            default:
-                throw new IllegalArgumentException();
-            }
-        }
-        throw new RuntimeException("Unsupported ByteOrder");
-       
-    }
-    
-    
-    private byte mediumToByte(int index, int value) {
-        if (order() == ByteOrder.LITTLE_ENDIAN) {
-            switch (index) {
-            case 0:
-                return (byte) (value >>> 16);
-            case 1:
-                return (byte) (value >>> 8);
-            case 2:
-                return (byte) (value >>> 0);
-            default:
-                throw new IllegalArgumentException();
-            }
-        } else if (order == ByteOrder.BIG_ENDIAN) {
-            switch (index) {
-            case 2:
-                return (byte) (value >>> 16);
-            case 1:
-                return (byte) (value >>> 8);
-            case 0:
-                return (byte) (value >>> 0);
-            default:
-                throw new IllegalArgumentException();
-            }
-        }
-        throw new RuntimeException("Unsupported ByteOrder");
-        
-    }
-    
-    private byte shortToByte(int index, int value) {
-        if (order() == ByteOrder.LITTLE_ENDIAN) {
-            switch (index) {
-            case 0:
-                return (byte) (value >>> 8);
-            case 1:
-                return (byte) (value >>> 0);
-            default:
-                throw new IllegalArgumentException();
-            }
-        } else if (order == ByteOrder.BIG_ENDIAN) {
-            switch (index) {
-            case 1:
-                return (byte) (value >>> 8);
-            case 0:
-                return (byte) (value >>> 0);
-            default:
-                throw new IllegalArgumentException();
-            }
-        }
-        throw new RuntimeException("Unsupported ByteOrder");
-
-       
-    }
-    
     @Override
     public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
         int offset = getIndexAndOffset(index)[1];
@@ -593,10 +384,11 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
             buf.setBytes(offset, src, srcIndex, subLength);
             offset = 0;
             written += subLength;
+            srcIndex += subLength;
+
             subLength = left(written, length);
-            srcIndex += written;
             
-            if (srcIndex >= src.capacity() -1) {
+            if (srcIndex >= src.capacity()) {
                 break;
             }
         }
@@ -615,9 +407,11 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
             buf.setBytes(offset, src, srcIndex, subLength);
             offset = 0;
             written += subLength;
+            srcIndex += subLength;
+
             subLength = left(written, length);
-            srcIndex += written;
-            if (srcIndex >= src.length -1) {
+            
+            if (srcIndex >= src.length) {
                 break;
             }
         }
@@ -627,16 +421,26 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public void setBytes(int index, ByteBuffer src) {
         int offset = getIndexAndOffset(index)[1];
         int remain = src.remaining();
-
+        int limit = src.limit();
         ChannelBuffer[] subBufs = slabs(index, remain);
         
+        // set a new limit for the ByteBuffer so we not get an IndexOutOfBounds exception if the remaining bytes are more then then what a single ChannelBuffer holds
+        src.limit(Math.min(limit, src.position() + capPerBuf - offset));
+
         for (ChannelBuffer buf : subBufs) {
             buf.setBytes(offset, src);
+            
+            // update the limit for the next loop
+            src.limit(Math.min(limit, src.position() + capPerBuf - offset));
+
             if (!src.hasRemaining()) {
-                return;
+                // nothing left to write to, so exit here
+                break;
             }
             offset = 0;
         }
+        // reset the limit to the old value
+        src.limit(limit);
     }
 
     @Override
@@ -745,16 +549,22 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         return duplicate;
     }
 
+    //TODO: Optimize some scenarios here
     @Override
     public ByteBuffer toByteBuffer(int index, int length) {
-        if (buffers.length == 1) {
-            return buffers[0].toByteBuffer(index, length);
-        }
-
-        ByteBuffer[] buffers = toByteBuffers(index, length);
         ByteBuffer merged = ByteBuffer.allocate(length).order(order());
-        for (ByteBuffer b: buffers) {
-            merged.put(b);
+        ChannelBuffer[] slabs = slabs(index, length);
+        int[] indexAndOffset = getIndexAndOffset(index);
+        int offset = indexAndOffset[1];
+        int written = 0;
+        for (ChannelBuffer buf: slabs) {
+            int remain = merged.remaining();
+            buf.getBytes(offset, merged);
+            offset = 0;
+            written += remain - merged.remaining();
+            if (written >= length) {
+                break;
+            }
         }
         merged.flip();
         return merged;
@@ -892,6 +702,13 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
 
     }
     
+    /**
+     * Return an immutable {@link List} that holds the requested {@link ChannelBuffer}'s
+     * 
+     * @param index
+     * @param length
+     * @return slabs
+     */
     public List<ChannelBuffer> getSlabs(int index, int length) {
         return Arrays.asList(slabs(index, length));
     }

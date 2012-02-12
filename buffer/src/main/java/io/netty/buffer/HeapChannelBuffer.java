@@ -223,4 +223,61 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
     public ByteBuffer toByteBuffer(int index, int length) {
         return ByteBuffer.wrap(array, index, length).order(order());
     }
+    
+
+    @Override
+    public short getShort(int index) {
+        return ChannelBufferUtil.getShort(index, array, order());
+    }
+
+    @Override
+    public int getUnsignedMedium(int index) {
+        return ChannelBufferUtil.getUnsignedMedium(index, array, order());
+
+    }
+
+    @Override
+    public int getInt(int index) {
+        return ChannelBufferUtil.getInt(index, array, order());
+    }
+
+    @Override
+    public long getLong(int index) {
+        return ChannelBufferUtil.getLong(index, array, order());
+
+    }
+
+    @Override
+    public void setShort(int index, int value) {
+        array[index]     = ChannelBufferUtil.shortToByte(0, value, order());
+        array[index + 1] = ChannelBufferUtil.shortToByte(1, value, order());
+    }
+
+    @Override
+    public void setMedium(int index, int   value) {
+        array[index]     = ChannelBufferUtil.mediumToByte(0, value, order());
+        array[index + 1] = ChannelBufferUtil.mediumToByte(1, value, order());
+        array[index + 2] = ChannelBufferUtil.mediumToByte(2, value, order());
+    }
+
+    @Override
+    public void setInt(int index, int   value) {
+        array[index]     = ChannelBufferUtil.intToByte(0, value, order());
+        array[index + 1] = ChannelBufferUtil.intToByte(1, value, order());
+        array[index + 2] = ChannelBufferUtil.intToByte(2, value, order());
+        array[index + 3] = ChannelBufferUtil.intToByte(3, value, order());
+    }
+
+    @Override
+    public void setLong(int index, long  value) {
+        array[index]     = ChannelBufferUtil.longToByte(0, value, order());
+        array[index + 1] = ChannelBufferUtil.longToByte(1, value, order());
+        array[index + 2] = ChannelBufferUtil.longToByte(2, value, order());
+        array[index + 3] = ChannelBufferUtil.longToByte(3, value, order());
+        array[index + 4] = ChannelBufferUtil.longToByte(4, value, order());
+        array[index + 5] = ChannelBufferUtil.longToByte(5, value, order());
+        array[index + 6] = ChannelBufferUtil.longToByte(6, value, order());
+        array[index + 7] = ChannelBufferUtil.longToByte(7, value, order());
+    }
+
 }
