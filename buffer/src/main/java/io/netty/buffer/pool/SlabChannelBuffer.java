@@ -549,25 +549,30 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         return duplicate;
     }
 
-    //TODO: Optimize some scenarios here
     @Override
     public ByteBuffer toByteBuffer(int index, int length) {
-        ByteBuffer merged = ByteBuffer.allocate(length).order(order());
         ChannelBuffer[] slabs = slabs(index, length);
-        int[] indexAndOffset = getIndexAndOffset(index);
-        int offset = indexAndOffset[1];
-        int written = 0;
-        for (ChannelBuffer buf: slabs) {
-            int remain = merged.remaining();
-            buf.getBytes(offset, merged);
-            offset = 0;
-            written += remain - merged.remaining();
-            if (written >= length) {
-                break;
+        if (slabs.length == 1) {
+            return slabs[0].toByteBuffer(index, length);
+        } else {
+            ByteBuffer merged = ByteBuffer.allocate(length).order(order());
+
+            int[] indexAndOffset = getIndexAndOffset(index);
+            int offset = indexAndOffset[1];
+            int written = 0;
+            for (ChannelBuffer buf: slabs) {
+                int remain = merged.remaining();
+                buf.getBytes(offset, merged);
+                offset = 0;
+                written += remain - merged.remaining();
+                if (written >= length) {
+                    break;
+                }
             }
+            merged.flip();
+            return merged;
         }
-        merged.flip();
-        return merged;
+        
     }
 
     /**
@@ -712,5 +717,21 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     public List<ChannelBuffer> getSlabs(int index, int length) {
         return Arrays.asList(slabs(index, length));
     }
-    
+
+
+    @Override
+    public ByteBuffer[] toByteBuffers(int index, int length) {        
+        ChannelBuffer[] slabs = slabs(index, length);
+        if (slabs.length == 1) {
+            return slabs[0].toByteBuffers(index, length);
+        } else {
+            ByteBuffer[] buffers = new ByteBuffer[slabs.length];
+            for (int i = 0; i < buffers.length; i++) {
+                buffers[i] = slabs[i].toByteBuffer();
+            }
+            
+            return buffers;
+        }
+        
+    }
 }
