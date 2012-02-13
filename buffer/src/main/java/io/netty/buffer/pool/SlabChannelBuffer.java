@@ -722,12 +722,19 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     @Override
     public ByteBuffer[] toByteBuffers(int index, int length) {        
         ChannelBuffer[] slabs = slabs(index, length);
+        int[] indexAndOffset = getIndexAndOffset(index);
+        int offset = indexAndOffset[1];
         if (slabs.length == 1) {
-            return slabs[0].toByteBuffers(index, length);
+            return slabs[0].toByteBuffers(offset, length);
         } else {
+            int len = length;
             ByteBuffer[] buffers = new ByteBuffer[slabs.length];
             for (int i = 0; i < buffers.length; i++) {
-                buffers[i] = slabs[i].toByteBuffer();
+                int subLength = Math.min(len, capPerBuf);
+
+                buffers[i] = slabs[i].toByteBuffer(offset, subLength);
+                len -= subLength;
+                offset = 0;
             }
             
             return buffers;
