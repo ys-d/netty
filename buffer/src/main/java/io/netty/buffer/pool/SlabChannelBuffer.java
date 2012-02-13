@@ -26,13 +26,11 @@ import java.util.Arrays;
 import java.util.List;
 
 import io.netty.buffer.AbstractChannelBuffer;
-import io.netty.buffer.BigEndianHeapChannelBuffer;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferFactory;
 import io.netty.buffer.ChannelBufferUtil;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.buffer.HeapChannelBufferFactory;
-import io.netty.buffer.LittleEndianHeapChannelBuffer;
 import io.netty.buffer.SlicedChannelBuffer;
 import io.netty.buffer.TruncatedChannelBuffer;
 
@@ -501,20 +499,11 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
     @Override
     public ChannelBuffer copy(int index, int length) {
         checkIndexInBounds(index, length);
+       
+        ChannelBuffer dst = factory().getBuffer(order(), length);
+        getBytes(index, dst);
         
-        
-        byte[] copiedArray = new byte[length];
-        getBytes(index, copiedArray);
-        
-        // TODO: Should we use Channels static methods here ?
-        if (order() == ByteOrder.BIG_ENDIAN) {
-            return new BigEndianHeapChannelBuffer(copiedArray);
-        } else if (order() == ByteOrder.LITTLE_ENDIAN) {
-            return new LittleEndianHeapChannelBuffer(copiedArray);
-        } else {
-            // This should never happen!
-            throw new RuntimeException("Unkown ByteOrder");
-        }
+        return dst;
     }
 
     
