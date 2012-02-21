@@ -23,6 +23,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import io.netty.buffer.AbstractChannelBuffer;
@@ -45,6 +46,8 @@ import io.netty.buffer.HeapChannelBufferFactory;
  *     <br>
  *       TODO: Check if this limitation can be lifted
  * 
+ * TODO: Add some kind of reference counting to understand if we can "free-up" buffers which are not used anymore. This could be for example true if only a slice 
+ *       of the {@link SlabChannelBuffer} is used anymore. 
  * 
  *
  */
@@ -620,7 +623,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
      * @return slabs
      */
     public List<ChannelBuffer> getSlabs() {
-        return Arrays.asList(buffers);
+        return Collections.unmodifiableList(Arrays.asList(buffers));
     }
     
     /**
@@ -676,7 +679,7 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
      * @return slabs
      */
     public List<ChannelBuffer> getSlabs(int index, int length) {
-        return Arrays.asList(slabs(index, length));
+        return Collections.unmodifiableList(Arrays.asList(slabs(index, length)));
     }
 
 
