@@ -29,10 +29,7 @@ import io.netty.buffer.AbstractChannelBuffer;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferFactory;
 import io.netty.buffer.ChannelBufferUtil;
-import io.netty.buffer.ChannelBuffers;
 import io.netty.buffer.HeapChannelBufferFactory;
-import io.netty.buffer.SlicedChannelBuffer;
-import io.netty.buffer.TruncatedChannelBuffer;
 
 /**
  * A special {@link AbstractChannelBuffer} which provide optimized access to Slab based {@link ChannelBuffer}'s. 
@@ -505,31 +502,6 @@ public class SlabChannelBuffer extends AbstractChannelBuffer{
         
         return dst;
     }
-
-    
-    @Override
-    public ChannelBuffer slice(int index, int length) {
-        if (index == 0) {
-            if (length == 0) {
-                return ChannelBuffers.EMPTY_BUFFER;
-            }
-            if (length == capacity) {
-                ChannelBuffer slice = duplicate();
-                slice.setIndex(0, length);
-                return slice;
-            } else {
-                // TODO: Should we use Channels static methods here ?
-                return new TruncatedChannelBuffer(this, length);
-            }
-        } else {
-            if (length == 0) {
-                return ChannelBuffers.EMPTY_BUFFER;
-            }
-            // TODO: Should we use Channels static methods here ?
-            return new SlicedChannelBuffer(this, index, length);
-        }
-    }
-
 
     @Override
     public ChannelBuffer duplicate() {

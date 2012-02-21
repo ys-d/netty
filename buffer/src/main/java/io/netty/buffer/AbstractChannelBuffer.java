@@ -664,6 +664,27 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     }
 
     @Override
+    public ChannelBuffer slice(int index, int length) {
+        if (index == 0) {
+            if (length == 0) {
+                return ChannelBuffers.EMPTY_BUFFER;
+            }
+            if (length == capacity()) {
+                ChannelBuffer slice = duplicate();
+                slice.setIndex(0, length);
+                return slice;
+            } else {
+                return new TruncatedChannelBuffer(this, length);
+            }
+        } else {
+            if (length == 0) {
+                return ChannelBuffers.EMPTY_BUFFER;
+            }
+            return new SlicedChannelBuffer(this, index, length);
+        }
+    }
+    
+    @Override
     public int hashCode() {
         return ChannelBuffers.hashCode(this);
     }
