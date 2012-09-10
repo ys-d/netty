@@ -44,7 +44,7 @@ public abstract class AbstractFixedByteBufPool implements ByteBufPool {
     }
 
     @Override
-    public ByteBuf acquire(int minCapacity) {
+    public final ByteBuf acquire(int minCapacity) {
         if (minCapacity == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
