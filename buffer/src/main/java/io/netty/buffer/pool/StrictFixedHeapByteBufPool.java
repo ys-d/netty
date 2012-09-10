@@ -26,6 +26,9 @@ import java.nio.ByteOrder;
  */
 public class StrictFixedHeapByteBufPool extends FixedHeapByteBufPool {
 
+    /**
+     * See {@link AbstractFixedByteBufPool#AbstractFixedByteBufPool(int, int, ByteOrder)}
+     */
     public StrictFixedHeapByteBufPool(int bufferCapacity, int bufferCount, ByteOrder order) {
         super(bufferCapacity, bufferCount, order);
     }
@@ -37,5 +40,4 @@ public class StrictFixedHeapByteBufPool extends FixedHeapByteBufPool {
     protected ByteBuf createExtraByteBuf(int minCapacity) {
         throw new PoolExhaustedException();
     }
-
 }

@@ -15,6 +15,14 @@
  */
 package io.netty.buffer.pool;
 
+import io.netty.buffer.ByteBuf;
+
+/**
+ * {@link IllegalStateException} which is throws if someone tries to
+ * acquire a {@link ByteBuf} via {@link ByteBufPool#acquire(int)} and
+ * its not possible to full-fill the request because of capacity issues.
+ *
+ */
 public class PoolExhaustedException extends IllegalStateException {
 
     private static final long serialVersionUID = -4781617592360472643L;

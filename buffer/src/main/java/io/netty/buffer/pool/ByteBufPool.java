@@ -17,10 +17,19 @@ package io.netty.buffer.pool;
 
 import io.netty.buffer.ByteBuf;
 
+/**
+ * A Pool which is responsible to pool {@link ByteBuf} instances. The implementation
+ * must take care that a {@link ByteBuf} is only acquired once until it is relased again
+ * by calling {@link ByteBuf.Unsafe#release()} till {@link ByteBuf.Unsafe#references()} is
+ * <code>0</code>.
+ *
+ */
 public interface ByteBufPool {
 
     /**
-     * Return a {@link ByteBuf} with the given minCapacity
+     * Return a {@link ByteBuf} with the given minCapacity.
+     * Implementations may also choose to throws {@link PoolExhaustedException}
+     * if nothing is left in the {@link ByteBufPool} to full-fill the request.
      */
     ByteBuf acquire(int minCapacity);
 

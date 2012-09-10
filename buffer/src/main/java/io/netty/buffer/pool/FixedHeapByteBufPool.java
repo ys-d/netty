@@ -27,6 +27,9 @@ import io.netty.buffer.Unpooled;
  */
 public class FixedHeapByteBufPool extends AbstractFixedByteBufPool {
 
+    /**
+     * See {@link AbstractFixedByteBufPool#AbstractFixedByteBufPool(int, int, ByteOrder)}
+     */
     public FixedHeapByteBufPool(int bufferCapacity, int bufferCount, ByteOrder order) {
         super(bufferCapacity, bufferCount, order);
     }

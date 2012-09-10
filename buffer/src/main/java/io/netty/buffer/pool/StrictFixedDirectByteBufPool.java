@@ -26,6 +26,9 @@ import java.nio.ByteOrder;
  */
 public class StrictFixedDirectByteBufPool extends FixedDirectByteBufPool {
 
+    /**
+     * See {@link AbstractFixedByteBufPool#AbstractFixedByteBufPool(int, int, ByteOrder)}
+     */
     public StrictFixedDirectByteBufPool(int bufferCapacity, int bufferCount, ByteOrder order) {
         super(bufferCapacity, bufferCount, order);
     }

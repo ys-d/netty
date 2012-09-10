@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * {@link ByteBufPool} implementation which has a fixed number of {@link ByteBuf} to
- * use.
+ * use via {@link #acquire(int)}.
  *
  */
 public abstract class AbstractFixedByteBufPool implements ByteBufPool {
@@ -32,9 +32,20 @@ public abstract class AbstractFixedByteBufPool implements ByteBufPool {
     private final Queue<Integer> indexes = new ConcurrentLinkedQueue<Integer>();
     private final int maxCapacity;
     private final ByteOrder order;
+    private final int bufferCapacity;
 
+    /**
+     * Create a new instance of {@link AbstractFixedByteBufPool} which pre-create {@link ByteBuf}'s
+     * with the capacity of the given <code>bufferCapacity</code>. There are will be
+     * <code>bufferCount</code> instances created. So the used memory can be calculated via
+     * <code>bufferCount * bufferCapacity</code>.
+     *
+     * Its up to the sub-class on how it behave if someone tries to acquire a {@link ByteBuf} via
+     * {@link #acquire(int)} which exceed the max capacity that is left in the {@link ByteBufPool}
+     */
     public AbstractFixedByteBufPool(int bufferCapacity, int bufferCount, ByteOrder order) {
         this.order = order;
+        this.bufferCapacity = bufferCapacity;
         this.maxCapacity = bufferCapacity * bufferCount;
         this.buffers = new PooledByteBuf[bufferCount];
         for (int i = 0; i < bufferCount; i++) {
@@ -71,6 +82,26 @@ public abstract class AbstractFixedByteBufPool implements ByteBufPool {
             }
             return Unpooled.wrappedBuffer(bufs);
         }
+    }
+
+    /**
+     * Return the {@link ByteOrder} which is used for {@link ByteBuf}'s which are acquired via {@link #acquire(int)}
+     */
+    public final ByteOrder order() {
+        return order;
+    }
+    /**
+     * Return the capacity of this {@link ByteBufPool} which is left for {@link #acquire(int)}.
+     */
+    public final int usableCapacity() {
+        return indexes.size() * bufferCapacity;
+    }
+
+    /**
+     * Return the capacity of this {@link ByteBufPool} in bytes.
+     */
+    public final int capacity() {
+        return maxCapacity;
     }
 
     /**
