@@ -32,7 +32,7 @@ import java.nio.charset.Charset;
  * Default {@link PooledByteBuf} implementation.
  *
  */
-final class DefaultPooledByteBuf extends PooledByteBuf {
+class DefaultPooledByteBuf extends PooledByteBuf {
 
     private ByteBuf buf;
     private final ByteBufPool pool;

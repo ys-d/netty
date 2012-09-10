@@ -1470,7 +1470,6 @@ public abstract class PooledByteBuf implements ByteBuf {
     }
 
     public abstract class PooledUnsafe implements Unsafe {
-
         @Override
         public void acquire() {
             if (refCnt <= 0) {
@@ -1487,8 +1486,16 @@ public abstract class PooledByteBuf implements ByteBuf {
             refCnt --;
             if (refCnt == 0) {
                 clear0();
+                afterRelease();
             }
         }
+    }
+
+    /**
+     * Is called once this instance is completely released via {@link PooledUnsafe#release()}
+     */
+    protected void afterRelease() {
+        // noop
     }
 
 }

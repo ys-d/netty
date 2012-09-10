@@ -2,7 +2,7 @@
  * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
+ * version 2.0 0(the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -15,13 +15,8 @@
  */
 package io.netty.buffer.pool;
 
-import io.netty.buffer.ByteBuf;
+public class PoolExhaustedException extends IllegalStateException {
 
-public interface ByteBufPool {
-
-    /**
-     * Return a {@link ByteBuf} with the given minCapacity
-     */
-    ByteBuf acquire(int minCapacity);
+    private static final long serialVersionUID = -4781617592360472643L;
 
 }

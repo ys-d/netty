@@ -2,7 +2,7 @@
  * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
+ * version 2.0 0(the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -15,13 +15,25 @@
  */
 package io.netty.buffer.pool;
 
+import java.nio.ByteOrder;
+
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
-public interface ByteBufPool {
+/**
+ * {@link AbstractFixedByteBufPool} which pools {@link ByteBuf}'s which are stored in
+ * the heap.
+ *
+ */
+public class FixedHeapByteBufPool extends AbstractFixedByteBufPool {
 
-    /**
-     * Return a {@link ByteBuf} with the given minCapacity
-     */
-    ByteBuf acquire(int minCapacity);
+    public FixedHeapByteBufPool(int bufferCapacity, int bufferCount, ByteOrder order) {
+        super(bufferCapacity, bufferCount, order);
+    }
+
+    @Override
+    protected ByteBuf createByteBuf(int minCapacity) {
+        return Unpooled.buffer(minCapacity);
+    }
 
 }
