@@ -349,5 +349,10 @@ public class HeapByteBuf extends AbstractByteBuf {
                 nioBuf = null;
             }
         }
+
+        @Override
+        public int references() {
+            return refCnt;
+        }
     }
 }

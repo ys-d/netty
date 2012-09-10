@@ -257,5 +257,10 @@ public class DuplicatedByteBuf extends AbstractByteBuf implements WrappedByteBuf
         public void release() {
             buffer.unsafe().release();
         }
+
+        @Override
+        public int references() {
+            return buffer.unsafe().references();
+        }
     }
 }

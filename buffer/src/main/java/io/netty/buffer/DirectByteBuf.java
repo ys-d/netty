@@ -466,5 +466,10 @@ public class DirectByteBuf extends AbstractByteBuf {
                 tmpBuf = null;
             }
         }
+
+        @Override
+        public int references() {
+            return refCnt;
+        }
     }
 }

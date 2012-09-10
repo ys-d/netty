@@ -1262,6 +1262,11 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                 lastAccessed = null;
             }
         }
+
+        @Override
+        public int references() {
+            return refCnt;
+        }
     }
 
     @Override

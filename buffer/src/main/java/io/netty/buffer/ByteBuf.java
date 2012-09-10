@@ -1879,5 +1879,7 @@ public interface ByteBuf extends ChannelBuf, Comparable<ByteBuf> {
          * unspecified and can even cause JVM crash.
          */
         void release();
+        
+        int references();
     }
 }
