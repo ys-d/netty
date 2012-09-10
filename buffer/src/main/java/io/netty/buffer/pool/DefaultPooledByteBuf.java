@@ -29,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
 /**
- * Default {@link PooledByteBuf} implementation 
+ * Default {@link PooledByteBuf} implementation.
  *
  */
 final class DefaultPooledByteBuf extends PooledByteBuf {
@@ -453,13 +453,11 @@ final class DefaultPooledByteBuf extends PooledByteBuf {
     @Override
     public void readBytes0(ByteBuf dst, int dstIndex, int length) {
         buf.readBytes(dst, dstIndex, length);
-        
     }
 
     @Override
     public void readBytes0(byte[] dst) {
         buf.readBytes(dst);
-        
     }
 
     @Override
@@ -500,7 +498,6 @@ final class DefaultPooledByteBuf extends PooledByteBuf {
     @Override
     public void writeShort0(int value) {
         buf.writeShort(value);
-        
     }
 
     @Override
