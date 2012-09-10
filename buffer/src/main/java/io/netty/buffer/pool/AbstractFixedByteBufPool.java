@@ -57,7 +57,7 @@ public abstract class AbstractFixedByteBufPool implements ByteBufPool {
                 for (int b = 0; b < i.length; b++) {
                     indexes.add(i[b]);
                 }
-                return createByteBuf(minCapacity).order(order);
+                return createExtraByteBuf(minCapacity).order(order);
             } else {
                 i[acquired++] = a;
             }
