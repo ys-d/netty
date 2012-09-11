@@ -20,8 +20,8 @@ import io.netty.buffer.ByteBuf;
 import java.nio.ByteOrder;
 
 /**
- * {@link FixedHeapByteBufPool} implementation which throws a {@link PoolExhaustedException} if
- * a {@link ByteBuf} was requested but not enough capacity is left in the {@link FixedHeapByteBufPool}.
+ * {@link FixedHeapByteBufPoolTest} implementation which throws a {@link PoolExhaustedException} if
+ * a {@link ByteBuf} was requested but not enough capacity is left in the {@link FixedHeapByteBufPoolTest}.
  *
  */
 public class StrictFixedHeapByteBufPool extends FixedHeapByteBufPool {

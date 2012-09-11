@@ -42,6 +42,7 @@ class DefaultPooledByteBuf extends PooledByteBuf {
         this.pool = pool;
         this.buf = buf;
         this.swappedBuf = new SwappedByteBuf(this);
+        initDone();
     }
 
     @Override

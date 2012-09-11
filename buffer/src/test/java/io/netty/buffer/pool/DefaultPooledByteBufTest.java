@@ -15,29 +15,20 @@
  */
 package io.netty.buffer.pool;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-
-import java.nio.ByteOrder;
+import io.netty.buffer.Unpooled;
 
 import org.junit.After;
 import org.junit.Before;
 
-import io.netty.buffer.AbstractChannelBufferTest;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+public class DefaultPooledByteBufTest extends PooledByteBufTest {
 
-public class DefaultPooledByteBufTest extends AbstractChannelBufferTest {
-
-    private ByteBufPool pool;
-    private ByteBuf buffer;
+    private UnpooledByteBufPool pool;
 
     @Before
     public void init() {
-        pool = createPool();
+        pool = new UnpooledByteBufPool();
         super.init();
     }
-
 
     @After
     public void dispose() {
@@ -45,30 +36,20 @@ public class DefaultPooledByteBufTest extends AbstractChannelBufferTest {
         pool = null;
     }
 
-    @Override
-    protected ByteBuf newBuffer(int capacity) {
-        buffer = pool.acquire(capacity);
-        assertSame(ByteOrder.BIG_ENDIAN, buffer.order());
-        assertEquals(0, buffer.writerIndex());
-        return buffer;
-    }
-
-    @Override
-    protected ByteBuf[] components() {
-        return new ByteBuf[] { buffer };
-
-    }
-
-    protected ByteBufPool createPool() {
-        return new UnpooledByteBufPool();
-    }
-
     private final class UnpooledByteBufPool implements ByteBufPool {
 
         @Override
         public PooledByteBuf acquire(int capacity) {
-            return new DefaultPooledByteBuf(this, Unpooled.buffer(capacity));
+            PooledByteBuf buf =  new DefaultPooledByteBuf(this, Unpooled.buffer(capacity));
+            buf.unsafe().acquire();
+            return buf;
         }
         
     }
+
+    @Override
+    protected PooledByteBuf createBuf(int capacity) {
+        return pool.acquire(capacity);
+    }
+
 }

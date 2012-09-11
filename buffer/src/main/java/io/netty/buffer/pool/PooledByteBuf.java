@@ -34,17 +34,29 @@ import io.netty.buffer.SlicedByteBuf;
 import io.netty.buffer.Unpooled;
 
 /**
- * {@link ByteBuf} which is pooled
+ * {@link ByteBuf} which is pooled.
+ * <br/>
+ * <br/>
+ * <strong>Sub-classes must call {@link #initDone()} once they are done with
+ * constructing the instance</strong>.
  *
  */
 public abstract class PooledByteBuf implements ByteBuf {
-    private int refCnt = 1;
+    private int refCnt;
+    private boolean initDone;
     private final PooledUnsafe unsafe = createUnsafe();
 
     private void checkReleased() {
-        if (refCnt == 0) {
+        if (initDone && refCnt == 0) {
             throw new IllegalStateException("PooledByteBuf was already released");
         }
+    }
+
+    /**
+     * Sub-classes must call this method after they are done with construction
+     */
+    protected void initDone() {
+        initDone = true;
     }
 
     /**
@@ -1443,7 +1455,6 @@ public abstract class PooledByteBuf implements ByteBuf {
 
     @Override
     public final Unsafe unsafe() {
-        checkReleased();
         return unsafe;
     }
 
@@ -1472,7 +1483,7 @@ public abstract class PooledByteBuf implements ByteBuf {
     public abstract class PooledUnsafe implements Unsafe {
         @Override
         public void acquire() {
-            if (refCnt <= 0) {
+            if (refCnt < 0) {
                 throw new IllegalStateException();
             }
             refCnt ++;

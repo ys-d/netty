@@ -59,7 +59,7 @@ public abstract class AbstractFixedByteBufPool implements ByteBufPool {
         if (minCapacity == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
-        int needed = (minCapacity / maxCapacity) + 1;
+        int needed =  (int) Math.ceil((double) minCapacity / bufferCapacity);
         int acquired = 0;
         int[] i = new int[needed];
         while (acquired < needed) {
@@ -74,13 +74,22 @@ public abstract class AbstractFixedByteBufPool implements ByteBufPool {
             }
         }
         if (i.length == 1) {
-            return buffers[i[0]];
+            PooledByteBuf buf = buffers[i[0]];
+            // acquire it now
+            buf.unsafe().acquire();
+            assert buf.unsafe().references() == 1;
+            return buf;
         } else {
             PooledByteBuf[] bufs = new PooledByteBuf[i.length];
             for (int a = 0; a < i.length; a++) {
-                bufs[a] = buffers[i[a]];
+                PooledByteBuf buf = buffers[i[a]];
+                // acquire it now
+                buf.unsafe().acquire();
+
+                assert buf.unsafe().references() == 1;
+                bufs[a] = buf;
             }
-            return Unpooled.wrappedBuffer(bufs);
+            return new PooledCompositeByteBuf(bufs).order(order());
         }
     }
 
@@ -102,6 +111,13 @@ public abstract class AbstractFixedByteBufPool implements ByteBufPool {
      */
     public final int capacity() {
         return maxCapacity;
+    }
+
+    /**
+     * Return the {@link ByteBuf}'s thate are ready to acquired
+     */
+    public final int usableBuffers() {
+        return indexes.size();
     }
 
     /**
