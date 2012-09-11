@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.ReadOnlyBufferException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -31,18 +32,21 @@ import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.ChannelBufType;
 import io.netty.buffer.DefaultCompositeByteBuf;
 
-public final class PooledCompositeByteBuf extends DefaultCompositeByteBuf {
+final class PooledCompositeByteBuf extends DefaultCompositeByteBuf {
 
-    public PooledCompositeByteBuf(ByteBuf[] buffers) {
+    public PooledCompositeByteBuf(PooledByteBuf[] buffers) {
         super(buffers.length);
-        for (ByteBuf buf: buffers) {
+        for (int i = 0; i < buffers.length; i++) {
+            ByteBuf buf =  buffers[i];
             buf.writerIndex(buf.capacity());
-            addComponents(buf);
+
+            super.addComponent(i, buf);
             buf.writerIndex(0);
 
             // release the buf again after we added it as the add operation will
             // increase the reference count also.
             buf.unsafe().release();
+
         }
     }
 
@@ -54,56 +58,66 @@ public final class PooledCompositeByteBuf extends DefaultCompositeByteBuf {
 
     @Override
     public void addComponent(ByteBuf buffer) {
-        checkReleased();
-        super.addComponent(buffer);
+        throw new ReadOnlyBufferException();
     }
 
     @Override
     public void addComponents(ByteBuf... buffers) {
-        checkReleased();
-        super.addComponents(buffers);
+        throw new ReadOnlyBufferException();
     }
 
     @Override
     public void addComponents(Iterable<ByteBuf> buffers) {
-        checkReleased();
-        super.addComponents(buffers);
+        throw new ReadOnlyBufferException();
+
     }
 
     @Override
     public void addComponent(int cIndex, ByteBuf buffer) {
-        checkReleased();
-        super.addComponent(cIndex, buffer);
+        throw new ReadOnlyBufferException();
     }
 
     @Override
     public void addComponents(int cIndex, ByteBuf... buffers) {
-        checkReleased();
-        super.addComponents(cIndex, buffers);
+        throw new ReadOnlyBufferException();
     }
 
     @Override
     public void addComponents(int cIndex, Iterable<ByteBuf> buffers) {
-        checkReleased();
-        super.addComponents(cIndex, buffers);
+        throw new ReadOnlyBufferException();
     }
 
     @Override
     public void removeComponent(int cIndex) {
-        checkReleased();
-        super.removeComponent(cIndex);
+        throw new ReadOnlyBufferException();
     }
 
     @Override
     public void removeComponents(int cIndex, int numComponents) {
-        checkReleased();
-        super.removeComponents(cIndex, numComponents);
+        throw new ReadOnlyBufferException();
     }
 
     @Override
     public Iterator<ByteBuf> iterator() {
         checkReleased();
-        return super.iterator();
+        final Iterator<ByteBuf> it = super.iterator();
+        return new Iterator<ByteBuf>() {
+
+            @Override
+            public boolean hasNext() {
+                return it.hasNext();
+            }
+
+            @Override
+            public ByteBuf next() {
+                return it.next();
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+        };
     }
 
     @Override

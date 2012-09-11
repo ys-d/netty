@@ -58,7 +58,6 @@ public abstract class AbstractByteBufPoolTest {
         ByteBuf buf = pool.acquire(8);
         checkBuf(buf, 8, ByteOrder.LITTLE_ENDIAN, true);
         assertEquals(1, buf.unsafe().references());
-        buf.writeInt(1);
         assertEquals(8, pool.usableBuffers());
 
         ByteBuf buf2 = pool.acquire(9);

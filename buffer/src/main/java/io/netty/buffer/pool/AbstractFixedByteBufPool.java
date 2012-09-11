@@ -89,7 +89,9 @@ public abstract class AbstractFixedByteBufPool implements ByteBufPool {
                 assert buf.unsafe().references() == 1;
                 bufs[a] = buf;
             }
-            return new PooledCompositeByteBuf(bufs).order(order());
+            ByteBuf b =  new PooledCompositeByteBuf(bufs).order(order());
+            return b;
+
         }
     }
 
@@ -136,7 +138,7 @@ public abstract class AbstractFixedByteBufPool implements ByteBufPool {
         return createByteBuf(minCapacity);
     }
 
-    private final class FixedPooledByteBuf extends DefaultPooledByteBuf {
+    private final class FixedPooledByteBuf extends PooledByteBuf {
 
         private final Integer index;
 
