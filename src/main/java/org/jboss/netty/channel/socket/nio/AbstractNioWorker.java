@@ -58,6 +58,7 @@ abstract class AbstractNioWorker implements Worker {
     private static final AtomicInteger nextId = new AtomicInteger();
 
     final int id = nextId.incrementAndGet();
+    private int registeredChannels;
 
     /**
      * Internal Netty logger.
@@ -127,16 +128,21 @@ abstract class AbstractNioWorker implements Worker {
         openSelector();
     }
 
-    void register(AbstractNioChannel<?> channel, ChannelFuture future) {
+    void register(AbstractNioChannel<?> channel, final ChannelFuture future) {
 
         synchronized (startStopLock) {
             if (selector == null) {
                 // the selector was null this means the Worker has already been shutdown.
                 throw new RejectedExecutionException("Worker has already been shutdown");
             }
-            Runnable registerTask = createRegisterTask(channel, future);
+            final Runnable registerTask = createRegisterTask(channel, future);
 
-            boolean offered = registerTaskQueue.offer(registerTask);
+            boolean offered = registerTaskQueue.offer(new Runnable() {
+                public void run() {
+                    registerTask.run();
+                    registeredChannels++;
+                }
+            });
             assert offered;
 
             if (wakenUp.compareAndSet(false, true)) {
@@ -241,7 +247,12 @@ abstract class AbstractNioWorker implements Worker {
 
             try {
                 long beforeSelect = System.nanoTime();
-                int selected = SelectorUtil.select(selector);
+                int selected;
+                if (registeredChannels > 0) {
+                    selected = SelectorUtil.select(selector);
+                } else {
+                    selected = SelectorUtil.selectIdle(selector);
+                }
                 if (SelectorUtil.EPOLL_BUG_WORKAROUND && selected == 0 && !wakenupFromLoop && !wakenUp.get()) {
                     long timeBlocked = System.nanoTime() - beforeSelect;
 
@@ -710,6 +721,12 @@ abstract class AbstractNioWorker implements Worker {
 
             if (channel.setClosed()) {
                 future.setSuccess();
+                executeInIoThread(new Runnable() {
+                    public void run() {
+                        registeredChannels--;
+                    }
+                });
+
                 if (connected) {
                     if (iothread) {
                         fireChannelDisconnected(channel);
