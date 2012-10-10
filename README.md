@@ -8,9 +8,10 @@ Netty is an asynchronous event-driven network application framework for rapid de
 
 - Docs: http://netty.io/docs/
 
-- Blog: http://netty.io/blog/
+- Blog: http://netty.io/blog/  
 
 - Twitter: @netty_project
+- weibo http://weibo.com/123840509
 
 ## Getting Netty
 
